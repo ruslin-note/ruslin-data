@@ -1,4 +1,4 @@
-use crate::{model, Folder, ModelUpgrade, Result, Version};
+use crate::{model, Folder, ModelUpgrade, Note, Result, Version};
 use rusqlite::Connection;
 use std::{ops::Deref, path::Path};
 
@@ -43,6 +43,7 @@ impl Database {
         let sp = self.conn.savepoint()?;
         let mut upgrade_manager = UpgradeManager::new();
         upgrade_manager.add::<Folder>();
+        upgrade_manager.add::<Note>();
         upgrade_manager.upgrade(&sp)?;
         Ok(sp.commit()?)
     }

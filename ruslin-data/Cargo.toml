@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+fallible-iterator = "0.2.0"
 rusqlite = { version = "0.28.0", features = ["bundled", "time"] }
 thiserror = "1.0.37"
 time = "0.3.17"

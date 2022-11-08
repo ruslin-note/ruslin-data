@@ -22,18 +22,18 @@ pub struct Folder {
 impl ModelUpgrade for Folder {
     fn upgrade_target_v1(conn: &Connection) -> Result<()> {
         let sql = r#"CREATE TABLE folders (
-            id TEXT PRIMARY KEY, 
-            title TEXT NOT NULL DEFAULT "", 
-            created_time INT NOT NULL, 
-            updated_time INT NOT NULL, 
-            user_created_time INT NOT NULL DEFAULT 0, 
-            user_updated_time INT NOT NULL DEFAULT 0, 
-            encryption_cipher_text TEXT NOT NULL DEFAULT "", 
-            encryption_applied INT NOT NULL DEFAULT 0, 
-            parent_id TEXT DEFAULT NULL, 
-            is_shared INT NOT NULL DEFAULT 0, 
-            share_id TEXT NOT NULL DEFAULT "", 
-            master_key_id TEXT NOT NULL DEFAULT "", 
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL DEFAULT "",
+            created_time INT NOT NULL,
+            updated_time INT NOT NULL,
+            user_created_time INT NOT NULL DEFAULT 0,
+            user_updated_time INT NOT NULL DEFAULT 0,
+            encryption_cipher_text TEXT NOT NULL DEFAULT "",
+            encryption_applied INT NOT NULL DEFAULT 0,
+            parent_id TEXT DEFAULT NULL,
+            is_shared INT NOT NULL DEFAULT 0,
+            share_id TEXT NOT NULL DEFAULT "",
+            master_key_id TEXT NOT NULL DEFAULT "",
             icon TEXT NOT NULL DEFAULT "");
 
             CREATE INDEX folders_title ON folders (title);

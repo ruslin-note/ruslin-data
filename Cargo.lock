@@ -148,6 +148,7 @@ version = "0.1.0"
 name = "ruslin-data"
 version = "0.1.0"
 dependencies = [
+ "fallible-iterator",
  "rusqlite",
  "thiserror",
  "time",

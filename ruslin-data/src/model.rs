@@ -60,7 +60,6 @@ mod tests {
     #[test]
     fn test_date_time() {
         let date_time = DateTime::now_utc();
-        // date_time.to_unix_timestamp()
         assert_eq!(
             date_time,
             DateTime::from_unix_timestamp(date_time.to_unix_timestamp())
