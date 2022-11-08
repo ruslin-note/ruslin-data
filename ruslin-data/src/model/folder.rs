@@ -1,5 +1,5 @@
 use crate::{get_id, DataError, Database, DateTime, ModelUpgrade, Result};
-use rusqlite::{named_params, params, Connection};
+use rusqlite::{named_params, Connection};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Folder {
@@ -200,7 +200,7 @@ mod tests {
         folder.save(&db)?;
         folder.delete(&db)?;
         assert!(Folder::query_one_by_id(&db, &folder_id).is_err());
-        assert_eq!(false, Folder::exists_by_id(&db, &folder_id)?);
+        assert!(!Folder::exists_by_id(&db, &folder_id)?);
         Ok(())
     }
 }

@@ -6,10 +6,10 @@ pub use folder::Folder;
 pub use note::Note;
 pub use version::Version;
 
-use crate::{Database, Result};
+use crate::Result;
 use rusqlite::{
     types::{FromSql, FromSqlError},
-    Connection, Savepoint, ToSql,
+    Connection, ToSql,
 };
 use time::OffsetDateTime;
 

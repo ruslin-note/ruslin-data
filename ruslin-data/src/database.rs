@@ -1,6 +1,6 @@
-use crate::{model, Folder, ModelUpgrade, Note, Result, Version};
+use crate::{Folder, ModelUpgrade, Note, Result, Version};
 use rusqlite::Connection;
-use std::{ops::Deref, path::Path};
+use std::path::Path;
 
 pub struct Database {
     pub(crate) conn: Connection,
@@ -49,14 +49,15 @@ impl Database {
     }
 }
 
+type UpgradeAction = fn(&Connection) -> Result<()>;
+
 struct UpgradeManager {
-    queue: Vec<Vec<fn(&Connection) -> Result<()>>>,
+    queue: Vec<Vec<UpgradeAction>>,
 }
 
 impl UpgradeManager {
     fn new() -> Self {
-        let mut queue: Vec<Vec<fn(&Connection) -> Result<()>>> =
-            Vec::with_capacity(DATABASE_VERSION);
+        let mut queue: Vec<Vec<UpgradeAction>> = Vec::with_capacity(DATABASE_VERSION);
         for _ in 0..=DATABASE_VERSION {
             queue.push(Vec::new());
         }

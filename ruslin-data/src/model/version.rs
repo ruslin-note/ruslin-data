@@ -2,7 +2,7 @@
 
 use rusqlite::{params, Connection, Statement};
 
-use crate::{Database, Result};
+use crate::Result;
 
 // CREATE TABLE version (version INT NOT NULL, table_fields_version INT NOT NULL DEFAULT 0)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
