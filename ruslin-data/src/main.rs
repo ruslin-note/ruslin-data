@@ -1,28 +1,12 @@
-use ruslin_data::model;
-
-use rusqlite::{Connection, Result};
-
-#[derive(Debug)]
-struct Note {
-    id: String,
-    parent_id: String,
-    title: String,
-}
+use ruslin_data::{model, Database, Folder, Result};
 
 fn main() -> Result<()> {
-    let conn = Connection::open("./database.sqlite")?;
-    let mut stmt = conn.prepare("SELECT * FROM notes")?;
-    let note_iter = stmt.query_map([], |row| {
-        Ok(Note {
-            id: row.get(0)?,
-            parent_id: row.get(1)?,
-            title: row.get(2)?,
-        })
-    })?;
-
-    for note in note_iter {
-        let note = note.unwrap();
-        println!("Found note {} {} {}", note.id, note.parent_id, note.title);
-    }
+    let db = Database::open("test.sqlite")?;
+    let mut folder = Folder::new("title".to_string(), None, "icon".to_string());
+    folder.save(&db)?;
+    assert_eq!(folder, Folder::query_one_by_id(&db, folder.get_id())?);
+    folder.title = "title2".to_string();
+    folder.save(&db)?;
+    assert_eq!(folder, Folder::query_one_by_id(&db, folder.get_id())?);
     Ok(())
 }
