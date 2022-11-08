@@ -1,1 +1,6 @@
-pub mod models;
+mod database;
+mod error;
+pub mod model;
+
+pub use database::Database;
+pub use error::{DataError, Result};

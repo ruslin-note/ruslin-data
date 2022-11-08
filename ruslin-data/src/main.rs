@@ -1,4 +1,4 @@
-use ruslin_data::models;
+use ruslin_data::model;
 
 use rusqlite::{Connection, Result};
 
@@ -23,7 +23,6 @@ fn main() -> Result<()> {
     for note in note_iter {
         let note = note.unwrap();
         println!("Found note {} {} {}", note.id, note.parent_id, note.title);
-        break;
     }
     Ok(())
 }
