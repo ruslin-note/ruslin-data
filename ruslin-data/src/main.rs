@@ -8,5 +8,6 @@ fn main() -> Result<()> {
     folder.title = "title2".to_string();
     folder.save(&db)?;
     assert_eq!(folder, Folder::query_one_by_id(&db, folder.get_id())?);
+    folder.delete(&db)?;
     Ok(())
 }

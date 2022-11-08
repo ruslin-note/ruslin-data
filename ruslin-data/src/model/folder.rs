@@ -1,4 +1,4 @@
-use crate::{get_id, Database, DateTime, ModelUpgrade, Result};
+use crate::{get_id, DataError, Database, DateTime, ModelUpgrade, Result};
 use rusqlite::{named_params, params, Connection};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -129,6 +129,12 @@ impl Folder {
         Ok(())
     }
 
+    pub fn exists_by_id(db: &Database, id: &str) -> Result<bool> {
+        let sql = r#"SELECT 1 FROM folders WHERE id = ?1;"#;
+        let mut stmt = db.conn.prepare(sql)?;
+        Ok(stmt.exists([id])?)
+    }
+
     pub fn query_one_by_id(db: &Database, id: &str) -> Result<Folder> {
         let sql = r#"SELECT 
             "id",
@@ -158,9 +164,14 @@ impl Folder {
         })?)
     }
 
-    // pub fn delete(self, db: &Database) -> Result<()> {
-    //     db.conn.execute("sql", params)
-    // }
+    pub fn delete(self, db: &Database) -> Result<()> {
+        if self.is_insert() {
+            return Err(DataError::ModelNotSaved("deleting folder"));
+        }
+        db.conn
+            .execute("DELETE FROM folders WHERE rowid = ?1", [self.row_id])?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -176,6 +187,20 @@ mod tests {
         folder.title = "title2".to_string();
         folder.save(&db)?;
         assert_eq!(folder, Folder::query_one_by_id(&db, folder.get_id())?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_delete_folder() -> Result<()> {
+        let db = Database::open_in_memory()?;
+        let folder = Folder::new("title".to_string(), None, "icon".to_string());
+        assert!(folder.delete(&db).is_err());
+        let mut folder = Folder::new("title".to_string(), None, "icon".to_string());
+        let folder_id = folder.get_id().to_string();
+        folder.save(&db)?;
+        folder.delete(&db)?;
+        assert!(Folder::query_one_by_id(&db, &folder_id).is_err());
+        assert_eq!(false, Folder::exists_by_id(&db, &folder_id)?);
         Ok(())
     }
 }

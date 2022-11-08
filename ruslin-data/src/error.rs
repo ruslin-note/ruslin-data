@@ -7,4 +7,6 @@ pub type Result<T> = std::result::Result<T, DataError>;
 pub enum DataError {
     #[error("sqlite")]
     Sqlite(#[from] SqliteError),
+    #[error("model not saved, when {0}")]
+    ModelNotSaved(&'static str),
 }

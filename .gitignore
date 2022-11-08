@@ -1,2 +1,3 @@
 /target
-/ruslin-data/database.sqlite
+/ruslin-data/*.sqlite
+/ruslin-data/*.sqlite-journal
