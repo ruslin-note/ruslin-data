@@ -14,7 +14,14 @@ pub struct StatList {
     // context:
 }
 
-pub struct Options {}
+pub enum Source {
+    File(String),
+    Text(String),
+}
+
+pub struct Options {
+    pub source: Source,
+}
 
 pub struct MultiPutItem {
     name: String,

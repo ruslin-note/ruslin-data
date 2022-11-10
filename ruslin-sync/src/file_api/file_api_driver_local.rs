@@ -1,4 +1,9 @@
-use super::FileApiDriver;
+use super::{file_api_driver::Source, FileApiDriver};
+use std::{
+    fs::{self, File},
+    io::Write,
+    path::Path,
+};
 
 pub struct FileApiDriverLocal {}
 
@@ -35,11 +40,23 @@ impl FileApiDriver for FileApiDriverLocal {
     }
 
     fn mkdir(path: &str) -> crate::Result<()> {
-        todo!()
+        if Path::new(path).is_dir() {
+            return Ok(());
+        }
+        Ok(fs::create_dir(path)?)
     }
 
     fn put(path: &str, options: &super::file_api_driver::Options) -> crate::Result<()> {
-        todo!()
+        match &options.source {
+            Source::File(from_path) => {
+                fs::copy(from_path, path)?;
+            }
+            Source::Text(content) => {
+                let mut file = File::create(path)?;
+                write!(&mut file, "{}", content)?;
+            }
+        }
+        Ok(())
     }
 
     fn multi_put(
