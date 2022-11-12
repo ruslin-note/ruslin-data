@@ -1,9 +1,5 @@
-use ruslin_sync::{FileApi, FileApiDriver, FileApiDriverLocal, Result};
+use ruslin_sync::{FileApi, FileApiDriverLocal, Result};
 use tempfile::tempdir;
-
-// fn get_local_file_api() -> FileApi<FileApiDriverLocal> {
-
-// }
 
 fn run_with_file_api(run: impl FnOnce(FileApi<FileApiDriverLocal>) -> Result<()>) -> Result<()> {
     let dir = tempdir().unwrap();
@@ -66,6 +62,18 @@ fn test_list_files() -> Result<()> {
         paths.sort();
         assert_eq!("test1.txt", paths[0]);
         assert_eq!("test2.txt", paths[1]);
+        Ok(())
+    })
+}
+
+#[test]
+fn test_delete_a_file() -> Result<()> {
+    run_with_file_api(|file_api| {
+        file_api.put("test1.txt", "testing1")?;
+        assert_eq!(1, file_api.list("")?.items.len());
+        file_api.delete("test1.txt")?;
+        let files = file_api.list("")?;
+        assert!(files.items.is_empty());
         Ok(())
     })
 }

@@ -65,6 +65,10 @@ impl<D: FileApiDriver> FileApi<D> {
         self.driver.clear_root(self.base_dir.to_str().unwrap())
     }
 
+    pub fn delete(&self, path: &str) -> Result<()> {
+        self.driver.delete(&self.full_path(path))
+    }
+
     fn full_path(&self, path: &str) -> String {
         self.base_dir.join(path).to_str().unwrap().to_string()
     }
