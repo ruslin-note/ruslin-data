@@ -1,7 +1,7 @@
 use crate::SyncError;
 
 use super::{
-    file_api_driver::{self, Source},
+    file_api_driver::{self, Source, Stat},
     FileApiDriver,
 };
 use std::{
@@ -35,14 +35,15 @@ impl FileApiDriver for FileApiDriverLocal {
         todo!()
     }
 
-    fn stat(&self, path: &str) -> crate::Result<super::file_api_driver::Stat> {
-        todo!()
+    fn stat(&self, path: &str) -> crate::Result<Stat> {
+        let metadata = fs::metadata(path)?;
+        metadata.try_into()
     }
 
     fn list(
         &self,
-        path: &str,
-        options: &super::file_api_driver::PutOptions,
+        _path: &str,
+        _options: &super::file_api_driver::PutOptions,
     ) -> crate::Result<super::file_api_driver::StatList> {
         todo!()
     }

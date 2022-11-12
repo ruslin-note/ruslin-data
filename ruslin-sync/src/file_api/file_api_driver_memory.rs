@@ -19,51 +19,51 @@ impl FileApiDriver for FileApiDriverMemory {
         todo!()
     }
 
-    fn stat(&self, path: &str) -> crate::Result<super::file_api_driver::Stat> {
+    fn stat(&self, _path: &str) -> crate::Result<super::file_api_driver::Stat> {
         todo!()
     }
 
     fn list(
         &self,
-        path: &str,
-        options: &super::file_api_driver::PutOptions,
+        _path: &str,
+        _options: &super::file_api_driver::PutOptions,
     ) -> crate::Result<super::file_api_driver::StatList> {
         todo!()
     }
 
     fn get(
         &self,
-        path: &str,
-        options: &super::file_api_driver::GetOptions,
+        _path: &str,
+        _options: &super::file_api_driver::GetOptions,
     ) -> crate::Result<Option<String>> {
         todo!()
     }
 
-    fn mkdir(&self, path: &str) -> crate::Result<()> {
+    fn mkdir(&self, _path: &str) -> crate::Result<()> {
         todo!()
     }
 
-    fn put(&self, path: &str, options: &super::file_api_driver::PutOptions) -> crate::Result<()> {
+    fn put(&self, _path: &str, _options: &super::file_api_driver::PutOptions) -> crate::Result<()> {
         todo!()
     }
 
     fn multi_put(
         &self,
-        items: &[super::file_api_driver::MultiPutItem],
-        options: &super::file_api_driver::PutOptions,
+        _items: &[super::file_api_driver::MultiPutItem],
+        _options: &super::file_api_driver::PutOptions,
     ) -> crate::Result<()> {
         todo!()
     }
 
-    fn delete(&self, path: &str) -> crate::Result<()> {
+    fn delete(&self, _path: &str) -> crate::Result<()> {
         todo!()
     }
 
-    fn r#move(&self, old_path: &str, new_path: &str) -> crate::Result<()> {
+    fn r#move(&self, _old_path: &str, _new_path: &str) -> crate::Result<()> {
         todo!()
     }
 
-    fn clear_root(&self, base_dir: &str) -> crate::Result<()> {
+    fn clear_root(&self, _base_dir: &str) -> crate::Result<()> {
         todo!()
     }
 }

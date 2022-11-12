@@ -21,3 +21,24 @@ fn test_create_a_file() -> Result<()> {
         Ok(())
     })
 }
+
+#[test]
+fn test_get_a_file_info() -> Result<()> {
+    run_with_file_api(|file_api| {
+        file_api.put("test1.txt", "testing")?;
+        file_api.mkdir("sub")?;
+        file_api.put("sub/test2.txt", "testing")?;
+
+        let stat = file_api.stat("test1.txt")?;
+        assert_eq!("test1.txt", stat.path);
+        assert!(stat.updated_time > 0);
+        assert!(!stat.is_dir);
+
+        let stat = file_api.stat("sub/test2.txt")?;
+        assert_eq!("sub/test2.txt", stat.path);
+        assert!(stat.updated_time > 0);
+        assert!(!stat.is_dir);
+
+        Ok(())
+    })
+}

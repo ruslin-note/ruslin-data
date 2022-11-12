@@ -1,11 +1,29 @@
-use crate::Result;
+use crate::{Result, SyncError};
+use std::fs::Metadata;
+use std::time::UNIX_EPOCH;
 
 pub struct Stat {
-    path: String,
-    updated_time: i64,
-    jop_updated_time: i64,
-    is_dir: bool,
-    is_deleted: bool,
+    pub path: String,
+    pub updated_time: i64,
+    // jop_updated_time: i64,
+    pub is_dir: bool,
+    // is_deleted: bool,
+}
+
+impl TryFrom<Metadata> for Stat {
+    type Error = SyncError;
+
+    fn try_from(metadata: Metadata) -> Result<Self> {
+        Ok(Self {
+            path: "".to_string(),
+            updated_time: metadata
+                .modified()?
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_micros() as i64,
+            is_dir: metadata.is_dir(),
+        })
+    }
 }
 
 pub struct StatList {

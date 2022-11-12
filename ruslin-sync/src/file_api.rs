@@ -8,7 +8,7 @@ pub use file_api_driver::FileApiDriver;
 pub use file_api_driver_local::FileApiDriverLocal;
 pub use file_api_driver_memory::FileApiDriverMemory;
 
-use self::file_api_driver::{GetOptions, PutOptions, Source};
+use self::file_api_driver::{GetOptions, PutOptions, Source, Stat};
 use crate::Result;
 
 pub struct FileApi<D: FileApiDriver> {
@@ -43,6 +43,18 @@ impl<D: FileApiDriver> FileApi<D> {
                 target: file_api_driver::GetTarget::Text,
             },
         )
+    }
+
+    pub fn mkdir(&self, path: &str) -> Result<()> {
+        let path = self.full_path(path);
+        log::debug!("mkdir {path}");
+        self.driver.mkdir(&path)
+    }
+
+    pub fn stat(&self, path: &str) -> Result<Stat> {
+        let mut stat = self.driver.stat(&self.full_path(path))?;
+        stat.path = path.to_string();
+        Ok(stat)
     }
 
     pub fn clear_root(&self) -> Result<()> {
