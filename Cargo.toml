@@ -3,4 +3,5 @@ members = [
     "ruslin",
     "ruslin-data",
     "ruslin-sync",
+    "ruslin-gtk-desktop",
 ]
