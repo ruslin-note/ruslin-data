@@ -53,3 +53,19 @@ fn test_create_a_file_in_a_subdirectory() -> Result<()> {
         Ok(())
     })
 }
+
+#[test]
+fn test_list_files() -> Result<()> {
+    run_with_file_api(|file_api| {
+        file_api.mkdir("subdir")?;
+        file_api.put("subdir/test1.txt", "testing1")?;
+        file_api.put("subdir/test2.txt", "testing2")?;
+        let files = file_api.list("subdir")?;
+        assert_eq!(2, files.items.len());
+        let mut paths: Vec<String> = files.items.into_iter().map(|s| s.path).collect();
+        paths.sort();
+        assert_eq!("test1.txt", paths[0]);
+        assert_eq!("test2.txt", paths[1]);
+        Ok(())
+    })
+}

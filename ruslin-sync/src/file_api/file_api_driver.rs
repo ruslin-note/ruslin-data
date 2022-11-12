@@ -27,8 +27,8 @@ impl TryFrom<Metadata> for Stat {
 }
 
 pub struct StatList {
-    items: Vec<Stat>,
-    has_more: bool,
+    pub items: Vec<Stat>,
+    pub has_more: bool,
     // context:
 }
 
@@ -40,6 +40,8 @@ pub enum Source {
 pub struct PutOptions {
     pub source: Source,
 }
+
+pub struct ListOptions;
 
 pub enum GetTarget {
     File(String),
@@ -62,7 +64,7 @@ pub trait FileApiDriver {
     fn request_repeat_count(&self) -> u32;
     fn stat(&self, path: &str) -> Result<Stat>;
     // public async delta(path: string, options: any)
-    fn list(&self, path: &str, options: &PutOptions) -> Result<StatList>;
+    fn list(&self, path: &str, options: &ListOptions) -> Result<StatList>;
     fn get(&self, path: &str, options: &GetOptions) -> Result<Option<String>>;
     fn mkdir(&self, path: &str) -> Result<()>;
     fn put(&self, path: &str, options: &PutOptions) -> Result<()>;

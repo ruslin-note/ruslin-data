@@ -1,4 +1,4 @@
-use super::file_api_driver::FileApiDriver;
+use super::file_api_driver::{FileApiDriver, ListOptions, StatList};
 
 pub struct FileApiDriverMemory {}
 
@@ -23,11 +23,7 @@ impl FileApiDriver for FileApiDriverMemory {
         todo!()
     }
 
-    fn list(
-        &self,
-        _path: &str,
-        _options: &super::file_api_driver::PutOptions,
-    ) -> crate::Result<super::file_api_driver::StatList> {
+    fn list(&self, _path: &str, _options: &ListOptions) -> crate::Result<StatList> {
         todo!()
     }
 

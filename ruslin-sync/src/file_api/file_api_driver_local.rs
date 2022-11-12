@@ -1,7 +1,7 @@
-use crate::SyncError;
+use crate::{Result, SyncError};
 
 use super::{
-    file_api_driver::{self, Source, Stat},
+    file_api_driver::{self, ListOptions, Source, Stat, StatList},
     FileApiDriver,
 };
 use std::{
@@ -40,12 +40,18 @@ impl FileApiDriver for FileApiDriverLocal {
         metadata.try_into()
     }
 
-    fn list(
-        &self,
-        _path: &str,
-        _options: &super::file_api_driver::PutOptions,
-    ) -> crate::Result<super::file_api_driver::StatList> {
-        todo!()
+    fn list(&self, path: &str, _options: &ListOptions) -> Result<StatList> {
+        let mut stats: Vec<Stat> = Vec::new();
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let mut stat: Stat = entry.metadata()?.try_into()?;
+            stat.path = entry.file_name().to_str().unwrap().to_string();
+            stats.push(stat);
+        }
+        Ok(StatList {
+            items: stats,
+            has_more: false,
+        })
     }
 
     fn get(

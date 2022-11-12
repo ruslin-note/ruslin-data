@@ -4,12 +4,12 @@ mod file_api_driver_memory;
 
 use std::path::{Path, PathBuf};
 
-pub use file_api_driver::FileApiDriver;
+use crate::Result;
+pub use file_api_driver::{FileApiDriver, GetOptions, PutOptions, Source, Stat, StatList};
 pub use file_api_driver_local::FileApiDriverLocal;
 pub use file_api_driver_memory::FileApiDriverMemory;
 
-use self::file_api_driver::{GetOptions, PutOptions, Source, Stat};
-use crate::Result;
+use self::file_api_driver::ListOptions;
 
 pub struct FileApi<D: FileApiDriver> {
     pub base_dir: PathBuf,
@@ -55,6 +55,10 @@ impl<D: FileApiDriver> FileApi<D> {
         let mut stat = self.driver.stat(&self.full_path(path))?;
         stat.path = path.to_string();
         Ok(stat)
+    }
+
+    pub fn list(&self, path: &str) -> Result<StatList> {
+        self.driver.list(&self.full_path(path), &ListOptions)
     }
 
     pub fn clear_root(&self) -> Result<()> {
