@@ -30,7 +30,10 @@ impl FileApiDriver for FileApiDriverMemory {
         todo!()
     }
 
-    fn get(path: &str, options: &super::file_api_driver::Options) -> crate::Result<Option<String>> {
+    fn get(
+        path: &str,
+        options: &super::file_api_driver::GetOptions,
+    ) -> crate::Result<Option<String>> {
         todo!()
     }
 

@@ -1,4 +1,9 @@
-use super::{file_api_driver::Source, FileApiDriver};
+use crate::SyncError;
+
+use super::{
+    file_api_driver::{self, Source},
+    FileApiDriver,
+};
 use std::{
     fs::{self, File},
     io::Write,
@@ -35,8 +40,18 @@ impl FileApiDriver for FileApiDriverLocal {
         todo!()
     }
 
-    fn get(path: &str, options: &super::file_api_driver::Options) -> crate::Result<Option<String>> {
-        todo!()
+    fn get(
+        path: &str,
+        options: &super::file_api_driver::GetOptions,
+    ) -> crate::Result<Option<String>> {
+        use file_api_driver::GetTarget;
+        match &options.target {
+            GetTarget::File(target_path) => {
+                fs::copy(path, target_path)?;
+                Ok(None)
+            }
+            GetTarget::Text => Ok(Some(fs::read_to_string(path)?)),
+        }
     }
 
     fn mkdir(path: &str) -> crate::Result<()> {
@@ -60,21 +75,26 @@ impl FileApiDriver for FileApiDriverLocal {
     }
 
     fn multi_put(
-        items: &[super::file_api_driver::MultiPutItem],
-        options: &super::file_api_driver::Options,
+        _items: &[super::file_api_driver::MultiPutItem],
+        _options: &super::file_api_driver::Options,
     ) -> crate::Result<()> {
-        todo!()
+        unimplemented!()
     }
 
     fn delete(path: &str) -> crate::Result<()> {
-        todo!()
+        let path = Path::new(path);
+        if !path.exists() {
+            return Err(SyncError::FileNotExists);
+        }
+        Ok(fs::remove_file(path)?)
     }
 
     fn r#move(old_path: &str, new_path: &str) -> crate::Result<()> {
-        todo!()
+        Ok(fs::rename(old_path, new_path)?)
     }
 
     fn clear_root(base_dir: &str) -> crate::Result<()> {
-        todo!()
+        fs::remove_dir_all(base_dir)?;
+        Ok(fs::create_dir(base_dir)?)
     }
 }

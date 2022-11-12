@@ -23,6 +23,15 @@ pub struct Options {
     pub source: Source,
 }
 
+pub enum GetTarget {
+    File(String),
+    Text,
+}
+
+pub struct GetOptions {
+    pub target: GetTarget,
+}
+
 pub struct MultiPutItem {
     name: String,
     body: String,
@@ -36,7 +45,7 @@ pub trait FileApiDriver {
     fn stat(path: &str) -> Result<Stat>;
     // public async delta(path: string, options: any)
     fn list(path: &str, options: &Options) -> Result<StatList>;
-    fn get(path: &str, options: &Options) -> Result<Option<String>>;
+    fn get(path: &str, options: &GetOptions) -> Result<Option<String>>;
     fn mkdir(path: &str) -> Result<()>;
     fn put(path: &str, options: &Options) -> Result<()>;
     fn multi_put(items: &[MultiPutItem], options: &Options) -> Result<()>;

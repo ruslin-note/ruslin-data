@@ -7,6 +7,8 @@ pub type Result<T> = std::result::Result<T, SyncError>;
 pub enum SyncError {
     #[error("io error")]
     IOError(#[from] io::Error),
+    #[error("file not exists")]
+    FileNotExists,
     #[error("unknown")]
     Unknown,
 }
