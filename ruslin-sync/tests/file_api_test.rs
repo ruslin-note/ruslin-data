@@ -42,3 +42,14 @@ fn test_get_a_file_info() -> Result<()> {
         Ok(())
     })
 }
+
+#[test]
+fn test_create_a_file_in_a_subdirectory() -> Result<()> {
+    run_with_file_api(|file_api| {
+        file_api.mkdir("subdir")?;
+        file_api.put("subdir/test.txt", "testing")?;
+        let content = file_api.get("subdir/test.txt")?;
+        assert_eq!("testing", content.unwrap());
+        Ok(())
+    })
+}
