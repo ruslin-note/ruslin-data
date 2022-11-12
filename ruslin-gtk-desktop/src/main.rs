@@ -1,4 +1,4 @@
-use gtk::prelude::*;
+use gtk::{prelude::*, Button};
 use gtk::{Application, ApplicationWindow};
 
 const APP_ID: &str = "org.dianqk.ruslin-desktop.gtk";
@@ -15,10 +15,26 @@ fn main() {
 }
 
 fn build_ui(app: &Application) {
+    // Create a button with label and margins
+    let button = Button::builder()
+        .label("Press me!")
+        .margin_top(12)
+        .margin_bottom(12)
+        .margin_start(12)
+        .margin_end(12)
+        .build();
+
+    // Connect to "clicked" signal of `button`
+    button.connect_clicked(move |button| {
+        // Set the label to "Hello Wordl!" after the button has been clicked on
+        button.set_label("Hello World!");
+    });
+
     // Create a window and set the title
     let window = ApplicationWindow::builder()
         .application(app)
         .title("Ruslin")
+        .child(&button)
         .build();
 
     // Present window
