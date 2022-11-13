@@ -1,14 +1,19 @@
+use std::cell::RefCell;
+
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, Button, CompositeTemplate};
+use gtk::{gio, glib, CompositeTemplate, Entry, ListView};
 
 // Object holding the state
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/org/dianqk/ruslin/main_window.ui")]
 pub struct MainWindow {
     #[template_child]
-    pub button: TemplateChild<Button>,
+    pub entry: TemplateChild<Entry>,
+    #[template_child]
+    pub tasks_list: TemplateChild<ListView>,
+    pub tasks: RefCell<Option<gio::ListStore>>,
 }
 
 // The central trait for subclassing a GObject
@@ -35,10 +40,10 @@ impl ObjectImpl for MainWindow {
         self.parent_constructed();
 
         // Connect to "clicked" signal of `button`
-        self.button.connect_clicked(move |button| {
-            // Set the label to "Hello World!" after the button has been clicked on
-            button.set_label("Hello World!");
-        });
+        // self.button.connect_clicked(move |button| {
+        //     // Set the label to "Hello World!" after the button has been clicked on
+        //     button.set_label("Hello World!");
+        // });
     }
 }
 
