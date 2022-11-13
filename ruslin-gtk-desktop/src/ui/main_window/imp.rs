@@ -5,7 +5,7 @@ use gtk::{glib, Button, CompositeTemplate};
 
 // Object holding the state
 #[derive(CompositeTemplate, Default)]
-#[template(resource = "/org/dianqk/ruslin/main_window.glade")]
+#[template(resource = "/org/dianqk/ruslin/main_window.ui")]
 pub struct MainWindow {
     #[template_child]
     pub button: TemplateChild<Button>,
