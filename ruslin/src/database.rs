@@ -168,7 +168,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::{Database, DatabaseResult};
-    use crate::{models::Folder};
+    use crate::models::Folder;
 
     struct TestDatabase(Database, TempDir);
 

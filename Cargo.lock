@@ -915,10 +915,6 @@ dependencies = [
 [[package]]
 name = "ruslin"
 version = "0.1.0"
-
-[[package]]
-name = "ruslin-data"
-version = "0.1.0"
 dependencies = [
  "chrono",
  "diesel",
