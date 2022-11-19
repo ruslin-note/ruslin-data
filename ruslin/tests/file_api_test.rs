@@ -1,7 +1,9 @@
-use ruslin_sync::{FileApi, FileApiDriverLocal, Result};
+use ruslin::sync::{FileApi, FileApiDriverLocal, SyncResult};
 use tempfile::tempdir;
 
-fn run_with_file_api(run: impl FnOnce(FileApi<FileApiDriverLocal>) -> Result<()>) -> Result<()> {
+fn run_with_file_api(
+    run: impl FnOnce(FileApi<FileApiDriverLocal>) -> SyncResult<()>,
+) -> SyncResult<()> {
     let dir = tempdir().unwrap();
     let base_dir = dir.path().to_str().unwrap();
     let file_api = FileApi::new(base_dir, FileApiDriverLocal::new());
@@ -10,7 +12,7 @@ fn run_with_file_api(run: impl FnOnce(FileApi<FileApiDriverLocal>) -> Result<()>
 }
 
 #[test]
-fn test_create_a_file() -> Result<()> {
+fn test_create_a_file() -> SyncResult<()> {
     run_with_file_api(|file_api| {
         file_api.put("test.txt", "testing")?;
         assert_eq!("testing", file_api.get("test.txt")?.unwrap());
@@ -19,7 +21,7 @@ fn test_create_a_file() -> Result<()> {
 }
 
 #[test]
-fn test_get_a_file_info() -> Result<()> {
+fn test_get_a_file_info() -> SyncResult<()> {
     run_with_file_api(|file_api| {
         file_api.put("test1.txt", "testing")?;
         file_api.mkdir("sub")?;
@@ -40,7 +42,7 @@ fn test_get_a_file_info() -> Result<()> {
 }
 
 #[test]
-fn test_create_a_file_in_a_subdirectory() -> Result<()> {
+fn test_create_a_file_in_a_subdirectory() -> SyncResult<()> {
     run_with_file_api(|file_api| {
         file_api.mkdir("subdir")?;
         file_api.put("subdir/test.txt", "testing")?;
@@ -51,7 +53,7 @@ fn test_create_a_file_in_a_subdirectory() -> Result<()> {
 }
 
 #[test]
-fn test_list_files() -> Result<()> {
+fn test_list_files() -> SyncResult<()> {
     run_with_file_api(|file_api| {
         file_api.mkdir("subdir")?;
         file_api.put("subdir/test1.txt", "testing1")?;
@@ -67,7 +69,7 @@ fn test_list_files() -> Result<()> {
 }
 
 #[test]
-fn test_delete_a_file() -> Result<()> {
+fn test_delete_a_file() -> SyncResult<()> {
     run_with_file_api(|file_api| {
         file_api.put("test1.txt", "testing1")?;
         assert_eq!(1, file_api.list("")?.items.len());

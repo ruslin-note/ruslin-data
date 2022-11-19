@@ -1,4 +1,4 @@
-use crate::{Result, SyncError};
+use crate::sync::{SyncError, SyncResult};
 
 use super::{
     file_api_driver::{self, ListOptions, Source, Stat, StatList},
@@ -10,6 +10,7 @@ use std::{
     path::Path,
 };
 
+#[derive(Debug, Default)]
 pub struct FileApiDriverLocal {}
 
 impl FileApiDriverLocal {
@@ -35,12 +36,12 @@ impl FileApiDriver for FileApiDriverLocal {
         todo!()
     }
 
-    fn stat(&self, path: &str) -> crate::Result<Stat> {
+    fn stat(&self, path: &str) -> SyncResult<Stat> {
         let metadata = fs::metadata(path)?;
         metadata.try_into()
     }
 
-    fn list(&self, path: &str, _options: &ListOptions) -> Result<StatList> {
+    fn list(&self, path: &str, _options: &ListOptions) -> SyncResult<StatList> {
         let mut stats: Vec<Stat> = Vec::new();
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -58,7 +59,7 @@ impl FileApiDriver for FileApiDriverLocal {
         &self,
         path: &str,
         options: &super::file_api_driver::GetOptions,
-    ) -> crate::Result<Option<String>> {
+    ) -> SyncResult<Option<String>> {
         use file_api_driver::GetTarget;
         match &options.target {
             GetTarget::File(target_path) => {
@@ -69,14 +70,14 @@ impl FileApiDriver for FileApiDriverLocal {
         }
     }
 
-    fn mkdir(&self, path: &str) -> crate::Result<()> {
+    fn mkdir(&self, path: &str) -> SyncResult<()> {
         if Path::new(path).is_dir() {
             return Ok(());
         }
         Ok(fs::create_dir(path)?)
     }
 
-    fn put(&self, path: &str, options: &super::file_api_driver::PutOptions) -> crate::Result<()> {
+    fn put(&self, path: &str, options: &super::file_api_driver::PutOptions) -> SyncResult<()> {
         match &options.source {
             Source::File(from_path) => {
                 fs::copy(from_path, path)?;
@@ -93,11 +94,11 @@ impl FileApiDriver for FileApiDriverLocal {
         &self,
         _items: &[super::file_api_driver::MultiPutItem],
         _options: &super::file_api_driver::PutOptions,
-    ) -> crate::Result<()> {
+    ) -> SyncResult<()> {
         unimplemented!()
     }
 
-    fn delete(&self, path: &str) -> crate::Result<()> {
+    fn delete(&self, path: &str) -> SyncResult<()> {
         let path = Path::new(path);
         if !path.exists() {
             return Err(SyncError::FileNotExists);
@@ -105,11 +106,11 @@ impl FileApiDriver for FileApiDriverLocal {
         Ok(fs::remove_file(path)?)
     }
 
-    fn r#move(&self, old_path: &str, new_path: &str) -> crate::Result<()> {
+    fn r#move(&self, old_path: &str, new_path: &str) -> SyncResult<()> {
         Ok(fs::rename(old_path, new_path)?)
     }
 
-    fn clear_root(&self, base_dir: &str) -> crate::Result<()> {
+    fn clear_root(&self, base_dir: &str) -> SyncResult<()> {
         fs::remove_dir_all(base_dir)?;
         Ok(fs::create_dir(base_dir)?)
     }

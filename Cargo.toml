@@ -1,6 +1,5 @@
 [workspace]
 members = [
     "ruslin",
-    "ruslin-sync",
     "ruslin-gtk-desktop",
 ]

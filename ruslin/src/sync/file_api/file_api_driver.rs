@@ -1,4 +1,4 @@
-use crate::{Result, SyncError};
+use crate::sync::{SyncError, SyncResult};
 use std::fs::Metadata;
 use std::time::UNIX_EPOCH;
 
@@ -13,7 +13,7 @@ pub struct Stat {
 impl TryFrom<Metadata> for Stat {
     type Error = SyncError;
 
-    fn try_from(metadata: Metadata) -> Result<Self> {
+    fn try_from(metadata: Metadata) -> SyncResult<Self> {
         Ok(Self {
             path: "".to_string(),
             updated_time: metadata
@@ -53,8 +53,8 @@ pub struct GetOptions {
 }
 
 pub struct MultiPutItem {
-    name: String,
-    body: String,
+    pub name: String,
+    pub body: String,
 }
 
 pub trait FileApiDriver {
@@ -62,16 +62,16 @@ pub trait FileApiDriver {
     fn supports_accurate_timestamp(&self) -> bool;
     fn supports_locks(&self) -> bool;
     fn request_repeat_count(&self) -> u32;
-    fn stat(&self, path: &str) -> Result<Stat>;
+    fn stat(&self, path: &str) -> SyncResult<Stat>;
     // public async delta(path: string, options: any)
-    fn list(&self, path: &str, options: &ListOptions) -> Result<StatList>;
-    fn get(&self, path: &str, options: &GetOptions) -> Result<Option<String>>;
-    fn mkdir(&self, path: &str) -> Result<()>;
-    fn put(&self, path: &str, options: &PutOptions) -> Result<()>;
-    fn multi_put(&self, items: &[MultiPutItem], options: &PutOptions) -> Result<()>;
-    fn delete(&self, path: &str) -> Result<()>;
-    fn r#move(&self, old_path: &str, new_path: &str) -> Result<()>;
-    fn clear_root(&self, base_dir: &str) -> Result<()>;
+    fn list(&self, path: &str, options: &ListOptions) -> SyncResult<StatList>;
+    fn get(&self, path: &str, options: &GetOptions) -> SyncResult<Option<String>>;
+    fn mkdir(&self, path: &str) -> SyncResult<()>;
+    fn put(&self, path: &str, options: &PutOptions) -> SyncResult<()>;
+    fn multi_put(&self, items: &[MultiPutItem], options: &PutOptions) -> SyncResult<()>;
+    fn delete(&self, path: &str) -> SyncResult<()>;
+    fn r#move(&self, old_path: &str, new_path: &str) -> SyncResult<()>;
+    fn clear_root(&self, base_dir: &str) -> SyncResult<()>;
     // public async acquireLock(type: LockType, clientType: LockClientType, clientId: string): Promise<Lock>
     // public async releaseLock(type: LockType, clientType: LockClientType, clientId: string)
     // public async listLocks()

@@ -1,3 +1,5 @@
+use crate::sync::SyncResult;
+
 use super::file_api_driver::{FileApiDriver, ListOptions, StatList};
 
 pub struct FileApiDriverMemory {}
@@ -19,11 +21,11 @@ impl FileApiDriver for FileApiDriverMemory {
         todo!()
     }
 
-    fn stat(&self, _path: &str) -> crate::Result<super::file_api_driver::Stat> {
+    fn stat(&self, _path: &str) -> SyncResult<super::file_api_driver::Stat> {
         todo!()
     }
 
-    fn list(&self, _path: &str, _options: &ListOptions) -> crate::Result<StatList> {
+    fn list(&self, _path: &str, _options: &ListOptions) -> SyncResult<StatList> {
         todo!()
     }
 
@@ -31,15 +33,15 @@ impl FileApiDriver for FileApiDriverMemory {
         &self,
         _path: &str,
         _options: &super::file_api_driver::GetOptions,
-    ) -> crate::Result<Option<String>> {
+    ) -> SyncResult<Option<String>> {
         todo!()
     }
 
-    fn mkdir(&self, _path: &str) -> crate::Result<()> {
+    fn mkdir(&self, _path: &str) -> SyncResult<()> {
         todo!()
     }
 
-    fn put(&self, _path: &str, _options: &super::file_api_driver::PutOptions) -> crate::Result<()> {
+    fn put(&self, _path: &str, _options: &super::file_api_driver::PutOptions) -> SyncResult<()> {
         todo!()
     }
 
@@ -47,19 +49,19 @@ impl FileApiDriver for FileApiDriverMemory {
         &self,
         _items: &[super::file_api_driver::MultiPutItem],
         _options: &super::file_api_driver::PutOptions,
-    ) -> crate::Result<()> {
+    ) -> SyncResult<()> {
         todo!()
     }
 
-    fn delete(&self, _path: &str) -> crate::Result<()> {
+    fn delete(&self, _path: &str) -> SyncResult<()> {
         todo!()
     }
 
-    fn r#move(&self, _old_path: &str, _new_path: &str) -> crate::Result<()> {
+    fn r#move(&self, _old_path: &str, _new_path: &str) -> SyncResult<()> {
         todo!()
     }
 
-    fn clear_root(&self, _base_dir: &str) -> crate::Result<()> {
+    fn clear_root(&self, _base_dir: &str) -> SyncResult<()> {
         todo!()
     }
 }
