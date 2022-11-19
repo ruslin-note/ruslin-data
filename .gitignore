@@ -1,4 +1,4 @@
 /target
 /ruslin-data/*.sqlite
-/ruslin-data/*.sqlite-journal
+/ruslin-data/*.sqlite-*
 *.kate-swp

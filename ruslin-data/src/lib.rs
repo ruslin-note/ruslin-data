@@ -1,7 +1,13 @@
 mod database;
-mod error;
-pub mod model;
+mod models;
+mod schema;
 
-pub use database::Database;
-pub use error::{DataError, Result};
-pub use model::*;
+// mod error;
+// pub mod model;
+
+// pub use database::Database;
+// pub use error::{DataError, Result};
+// pub use model::*;
+
+pub use database::{Database, DatabaseError, DatabaseResult};
+pub use models::*;
