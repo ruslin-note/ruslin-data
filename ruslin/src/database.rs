@@ -71,7 +71,7 @@ impl Database {
         diesel::replace_into(folders::table)
             .values(&folder)
             .execute(&mut conn)?;
-        self.insert_sync_item(ModelType::Folder, &folder.id.as_str())?;
+        self.insert_sync_item(ModelType::Folder, folder.id.as_str())?;
         Ok(())
     }
 
@@ -141,7 +141,7 @@ impl Database {
         diesel::replace_into(notes::table)
             .values(&note)
             .execute(&mut conn)?;
-        self.insert_sync_item(ModelType::Note, &note.id.as_str())?;
+        self.insert_sync_item(ModelType::Note, note.id.as_str())?;
         Ok(())
     }
 

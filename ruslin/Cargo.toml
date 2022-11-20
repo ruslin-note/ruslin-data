@@ -11,6 +11,7 @@ diesel = { version = "2.0", features = ["sqlite", "chrono", "r2d2", "uuid", "ext
 diesel_migrations = { version = "2.0.0", features = ["sqlite"] }
 log = "0.4.17"
 r2d2 = "0.8.10"
+reqwest = { version = "0.11.13", features = ["blocking", "json"] }
 serde = { version = "1.0.147", features = ["derive"] }
 serde_repr = "0.1.9"
 thiserror = "1.0.37"
@@ -18,3 +19,4 @@ uuid = { version = "1.2.1", features = ["std", "v7"] }
 
 [dev-dependencies]
 tempfile = "3.3.0"
+toml = "0.5.9"
