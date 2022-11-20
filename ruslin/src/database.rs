@@ -3,20 +3,20 @@ mod error;
 
 pub use error::DatabaseError;
 
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
-
+use diesel::prelude::*;
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection,
 };
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use crate::{
-    database::connection_options::ConnectionOptions, models::Folder, AbbrNote, FolderID, Note,
-    NoteID,
+    database::connection_options::ConnectionOptions, models::Folder, AbbrNote, DateTime, FolderID,
+    ModelType, NewSyncItem, Note, NoteID, SyncTarget,
 };
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
@@ -71,6 +71,7 @@ impl Database {
         diesel::replace_into(folders::table)
             .values(folder)
             .execute(&mut conn)?;
+        self.insert_sync_item(ModelType::Folder, folder.id.as_str())?;
         Ok(())
     }
 
@@ -139,6 +140,7 @@ impl Database {
         diesel::replace_into(notes::table)
             .values(note)
             .execute(&mut conn)?;
+        self.insert_sync_item(ModelType::Note, note.id.as_str())?;
         Ok(())
     }
 
@@ -156,6 +158,46 @@ impl Database {
         use crate::schema::notes;
         diesel::delete(notes::table)
             .filter(notes::id.eq_any(notes))
+            .execute(&mut conn)?;
+        Ok(())
+    }
+}
+
+impl Database {
+    fn insert_sync_item(
+        &self,
+        // sync_target: SyncTarget,
+        item_type: ModelType,
+        item_id: &str,
+    ) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::sync_items;
+
+        let sync_item_exists: bool = diesel::select(diesel::dsl::exists(
+            sync_items::dsl::sync_items.filter(sync_items::item_id.eq(item_id)),
+        ))
+        .get_result(&mut conn)?;
+        if sync_item_exists {
+            return Ok(());
+        }
+
+        let sync_item = NewSyncItem {
+            sync_target: SyncTarget::FileSystem, // TODO: supports multiple sync targets?
+            item_type,
+            item_id,
+        };
+        diesel::insert_into(sync_items::table)
+            .values(&sync_item)
+            .execute(&mut conn)?;
+        Ok(())
+    }
+
+    pub fn set_sync_item_up_to_data(&self, item_id: &str) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::sync_items;
+        diesel::update(sync_items::table)
+            .filter(sync_items::item_id.eq(item_id))
+            .set(sync_items::sync_time.eq(DateTime::now()))
             .execute(&mut conn)?;
         Ok(())
     }

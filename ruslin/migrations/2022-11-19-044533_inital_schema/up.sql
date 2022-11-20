@@ -45,7 +45,7 @@ CREATE TABLE notes(
     encryption_applied INT NOT NULL DEFAULT 0,
     markup_language BOOLEAN NOT NULL DEFAULT TRUE,
     is_shared BOOLEAN NOT NULL DEFAULT FALSE,
-    share_id TEXT NOT NULL DEFAULT "", 
+    share_id TEXT NOT NULL DEFAULT "",
     conflict_original_id TEXT DEFAULT NULL,
     master_key_id TEXT NOT NULL DEFAULT ""
 );
@@ -55,3 +55,22 @@ CREATE INDEX notes_updated_time ON notes (updated_time);
 CREATE INDEX notes_is_conflict ON notes (is_conflict);
 CREATE INDEX notes_is_todo ON notes (is_todo);
 CREATE INDEX notes_custom_order ON notes (custom_order);
+
+---
+
+CREATE TABLE sync_items (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    sync_target INT NOT NULL,
+    sync_time BIGINT NOT NULL DEFAULT 0,
+    item_type INT NOT NULL,
+    item_id TEXT NOT NULL,
+    sync_disabled BOOLEAN NOT NULL DEFAULT FALSE,
+    sync_disabled_reason TEXT NOT NULL DEFAULT "",
+    force_sync BOOLEAN NOT NULL DEFAULT FALSE,
+    item_location INT NOT NULL DEFAULT 1
+);
+
+CREATE INDEX sync_items_sync_time ON sync_items (sync_time);
+CREATE INDEX sync_items_sync_target ON sync_items (sync_target);
+CREATE INDEX sync_items_item_type ON sync_items (item_type);
+CREATE INDEX sync_items_item_id ON sync_items (item_id);

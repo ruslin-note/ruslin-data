@@ -51,4 +51,18 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(folders, notes,);
+diesel::table! {
+    sync_items (id) {
+        id -> Integer,
+        sync_target -> Integer,
+        sync_time -> BigInt,
+        item_type -> Integer,
+        item_id -> Text,
+        sync_disabled -> Bool,
+        sync_disabled_reason -> Text,
+        force_sync -> Bool,
+        item_location -> Integer,
+    }
+}
+
+diesel::allow_tables_to_appear_in_same_query!(folders, notes, sync_items,);
