@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use thiserror::Error;
 
-use crate::DateTime;
+use crate::{DateTime, ModelType};
 
 #[cfg(test)]
 mod test_env {
@@ -61,6 +61,23 @@ pub struct FileMetadata {
     pub name: String,
     pub updated_time: DateTime,
     pub created_time: DateTime,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeltaItem {
+    pub id: String,
+    pub item_id: String,
+    pub item_name: String,
+    pub r#type: ModelType,
+    pub update_time: DateTime,
+    pub jop_updated_time: DateTime,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeltaResult {
+    pub items: Vec<DeltaItem>,
+    pub cursor: String,
+    pub has_more: bool,
 }
 
 pub struct JoplinServerAPI {
@@ -139,6 +156,20 @@ impl JoplinServerAPI {
             .error_for_status()?;
         Ok(res.json()?)
     }
+
+    pub fn root_delta(&self, cursor: Option<&str>) -> JoplinServerResult<DeltaResult> {
+        self.delta("", cursor)
+    }
+
+    pub fn delta(&self, path: &str, cursor: Option<&str>) -> JoplinServerResult<DeltaResult> {
+        let mut builder =
+            self.request_builder(Method::GET, &format!("{}/delta", self.with_path(path)));
+        if let Some(cursor) = cursor {
+            builder = builder.query(&[("cursor", cursor)]);
+        }
+        let res = builder.send()?.error_for_status()?;
+        Ok(res.json()?)
+    }
 }
 
 #[cfg(test)]
@@ -164,6 +195,18 @@ mod tests {
         assert_eq!(create_metadata.created_time, update_metadata.created_time);
         assert!(create_metadata.updated_time < update_metadata.updated_time);
         api.delete(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_delta() -> JoplinServerResult<()> {
+        let test_config = test_env::read_test_env().joplin_server;
+        let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
+        let path = "test-delta.md";
+        api.put(path, b"testing1".to_vec())?;
+        assert_eq!(b"testing1".to_vec(), api.get(path)?);
+        let delta_result = api.root_delta(None);
+        println!("r: {:?}", delta_result);
         Ok(())
     }
 }
