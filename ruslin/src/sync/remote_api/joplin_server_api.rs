@@ -114,6 +114,16 @@ impl JoplinServerAPI {
             .error_for_status()?;
         Ok(())
     }
+
+    pub fn get(&self, path: &str) -> JoplinServerResult<Vec<u8>> {
+        let res = self.client
+        .get(&format!("{}/content", self.with_path(path)))
+        .header("X-API-AUTH", &self.session_id)
+            .header("X-API-MIN-VERSION", "2.6.0")
+            .send()?
+            .error_for_status()?;
+        Ok(res.bytes()?.to_vec())
+    }
 }
 
 #[cfg(test)]
@@ -124,13 +134,15 @@ mod tests {
     fn test_simple() -> JoplinServerResult<()> {
         let test_config = test_env::read_test_env().joplin_server;
         let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
-        let create_result = api.put("testing.txt", "testing".as_bytes().to_vec())?;
-        assert!(create_result.created_time.is_some());
-        let update_result = api.put("testing.txt", "testing".as_bytes().to_vec())?;
+        let path = "testing.bin";
+        let create_result = api.put(path, b"testing1".to_vec())?;
+        assert_eq!(b"testing1".to_vec(), api.get(path)?);
+        let update_result = api.put(path, b"testing2".to_vec())?;
+        assert_eq!(b"testing2".to_vec(), api.get(path)?);
         assert!(update_result.created_time.is_none());
         assert_eq!(create_result.id, update_result.id);
         assert_eq!(create_result.name, update_result.name);
-        api.delete("testing.txt")?;
+        api.delete(path)?;
         Ok(())
     }
 }
