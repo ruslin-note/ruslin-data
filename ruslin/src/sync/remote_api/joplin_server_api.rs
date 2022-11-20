@@ -1,5 +1,5 @@
-use reqwest::blocking::Client;
-use reqwest::Error as ResError;
+use reqwest::blocking::{Client, RequestBuilder};
+use reqwest::{Error as ResError, Method};
 use serde::{Deserialize, Serialize};
 
 use thiserror::Error;
@@ -55,6 +55,14 @@ pub struct PutResult {
     pub created_time: Option<DateTime>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct FileMetadata {
+    pub id: String,
+    pub name: String,
+    pub updated_time: DateTime,
+    pub created_time: DateTime,
+}
+
 pub struct JoplinServerAPI {
     host: String,
     client: Client,
@@ -73,6 +81,13 @@ impl JoplinServerAPI {
 
     fn with_path(&self, path: &str) -> String {
         format!("{}/api/items/root:/{}:", self.host, path)
+    }
+
+    fn request_builder(&self, method: Method, path: &str) -> RequestBuilder {
+        self.client
+            .request(method, path)
+            .header("X-API-AUTH", &self.session_id)
+            .header("X-API-MIN-VERSION", "2.6.0")
     }
 
     pub fn login(&self, host: &str, email: &str, password: &str) -> JoplinServerResult<Self> {
@@ -94,10 +109,7 @@ impl JoplinServerAPI {
 
     pub fn put(&self, path: &str, bytes: Vec<u8>) -> JoplinServerResult<PutResult> {
         let res = self
-            .client
-            .put(&format!("{}/content", self.with_path(path)))
-            .header("X-API-AUTH", &self.session_id)
-            .header("X-API-MIN-VERSION", "2.6.0")
+            .request_builder(Method::PUT, &format!("{}/content", self.with_path(path)))
             .header("Content-Type", "application/octet-stream")
             .body(bytes)
             .send()?
@@ -106,23 +118,26 @@ impl JoplinServerAPI {
     }
 
     pub fn delete(&self, path: &str) -> JoplinServerResult<()> {
-        self.client
-            .delete(self.with_path(path))
-            .header("X-API-AUTH", &self.session_id)
-            .header("X-API-MIN-VERSION", "2.6.0")
+        self.request_builder(Method::DELETE, &self.with_path(path))
             .send()?
             .error_for_status()?;
         Ok(())
     }
 
     pub fn get(&self, path: &str) -> JoplinServerResult<Vec<u8>> {
-        let res = self.client
-        .get(&format!("{}/content", self.with_path(path)))
-        .header("X-API-AUTH", &self.session_id)
-            .header("X-API-MIN-VERSION", "2.6.0")
+        let res = self
+            .request_builder(Method::GET, &format!("{}/content", self.with_path(path)))
             .send()?
             .error_for_status()?;
         Ok(res.bytes()?.to_vec())
+    }
+
+    pub fn metadata(&self, path: &str) -> JoplinServerResult<FileMetadata> {
+        let res = self
+            .request_builder(Method::GET, &self.with_path(path))
+            .send()?
+            .error_for_status()?;
+        Ok(res.json()?)
     }
 }
 
@@ -136,12 +151,18 @@ mod tests {
         let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
         let path = "testing.bin";
         let create_result = api.put(path, b"testing1".to_vec())?;
+        let create_metadata = api.metadata(path)?;
         assert_eq!(b"testing1".to_vec(), api.get(path)?);
         let update_result = api.put(path, b"testing2".to_vec())?;
         assert_eq!(b"testing2".to_vec(), api.get(path)?);
+        let update_metadata = api.metadata(path)?;
         assert!(update_result.created_time.is_none());
         assert_eq!(create_result.id, update_result.id);
         assert_eq!(create_result.name, update_result.name);
+        assert_eq!(create_metadata.id, update_metadata.id);
+        assert_eq!(create_metadata.name, update_metadata.name);
+        assert_eq!(create_metadata.created_time, update_metadata.created_time);
+        assert!(create_metadata.updated_time < update_metadata.updated_time);
         api.delete(path)?;
         Ok(())
     }
