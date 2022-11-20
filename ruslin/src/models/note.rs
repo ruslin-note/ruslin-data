@@ -28,6 +28,14 @@ pub struct Note {
     pub updated_time: DateTime,
 }
 
+impl Note {
+    pub fn updated(&self) -> Self {
+        let mut note = self.clone();
+        note.updated_time = DateTime::now();
+        note
+    }
+}
+
 impl Hash for AbbrNote {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.id.hash(hasher);

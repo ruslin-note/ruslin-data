@@ -3,7 +3,6 @@ mod error;
 
 pub use error::DatabaseError;
 
-use diesel::prelude::*;
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection,
@@ -66,12 +65,13 @@ impl Database {
 
 impl Database {
     pub fn replace_folder(&self, folder: &Folder) -> DatabaseResult<()> {
+        let folder = folder.updated();
         let mut conn = self.connection_pool.get()?;
         use crate::schema::folders;
         diesel::replace_into(folders::table)
-            .values(folder)
+            .values(&folder)
             .execute(&mut conn)?;
-        self.insert_sync_item(ModelType::Folder, folder.id.as_str())?;
+        self.insert_sync_item(ModelType::Folder, &folder.id.as_str())?;
         Ok(())
     }
 
@@ -135,12 +135,13 @@ impl Database {
     }
 
     pub fn replace_note(&self, note: &Note) -> DatabaseResult<()> {
+        let note = note.updated();
         let mut conn = self.connection_pool.get()?;
         use crate::schema::notes;
         diesel::replace_into(notes::table)
-            .values(note)
+            .values(&note)
             .execute(&mut conn)?;
-        self.insert_sync_item(ModelType::Note, note.id.as_str())?;
+        self.insert_sync_item(ModelType::Note, &note.id.as_str())?;
         Ok(())
     }
 

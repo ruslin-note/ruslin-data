@@ -25,6 +25,12 @@ impl Folder {
             updated_time: time,
         }
     }
+
+    pub fn updated(&self) -> Self {
+        let mut folder = self.clone();
+        folder.updated_time = DateTime::now();
+        folder
+    }
 }
 
 impl Hash for Folder {
