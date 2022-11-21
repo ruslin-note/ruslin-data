@@ -71,7 +71,7 @@ pub struct DeltaItem {
     pub item_id: String,
     pub item_name: String,
     pub r#type: ModelType,
-    pub update_time: DateTime,
+    pub updated_time: DateTime,
     pub jop_updated_time: DateTime,
 }
 
