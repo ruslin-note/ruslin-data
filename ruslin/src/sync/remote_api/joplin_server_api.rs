@@ -19,6 +19,8 @@ mod test_env {
     pub struct TestJoplinServerEnv {
         pub host: String,
         pub session_id: String,
+        pub email: String,
+        pub password: String,
     }
 
     pub fn read_test_env() -> TestEnv {
@@ -76,7 +78,21 @@ pub struct DeltaItem {
 #[derive(Debug, Deserialize)]
 pub struct DeltaResult {
     pub items: Vec<DeltaItem>,
-    pub cursor: String,
+    pub cursor: Option<String>,
+    pub has_more: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FileItem {
+    pub id: String,
+    pub name: String,
+    pub updated_time: DateTime,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListResult {
+    pub items: Vec<FileItem>,
+    pub cursor: Option<String>,
     pub has_more: bool,
 }
 
@@ -107,7 +123,7 @@ impl JoplinServerAPI {
             .header("X-API-MIN-VERSION", "2.6.0")
     }
 
-    pub fn login(&self, host: &str, email: &str, password: &str) -> JoplinServerResult<Self> {
+    pub fn login(host: &str, email: &str, password: &str) -> JoplinServerResult<Self> {
         let login_form = LoginForm { email, password };
         let host = host.to_string();
         let client = Client::new();
@@ -170,11 +186,40 @@ impl JoplinServerAPI {
         let res = builder.send()?.error_for_status()?;
         Ok(res.json()?)
     }
+
+    pub fn root_list(&self, cursor: Option<&str>) -> JoplinServerResult<ListResult> {
+        self.list("", cursor)
+    }
+
+    pub fn list(&self, path: &str, cursor: Option<&str>) -> JoplinServerResult<ListResult> {
+        let path = if path.is_empty() {
+            path.to_string()
+        } else {
+            format!("{}/*", path)
+        };
+        let mut builder =
+            self.request_builder(Method::GET, &format!("{}/children", self.with_path(&path)));
+        if let Some(cursor) = cursor {
+            builder = builder.query(&[("cursor", cursor)]);
+        }
+        let res = builder.send()?.error_for_status()?;
+        Ok(res.json()?)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{test_env, JoplinServerAPI, JoplinServerResult};
+
+    #[test]
+    fn test_login() -> JoplinServerResult<()> {
+        let test_config = test_env::read_test_env().joplin_server;
+        let api =
+            JoplinServerAPI::login(&test_config.host, &test_config.email, &test_config.password)?;
+        assert!(!api.session_id.is_empty());
+        println!("session id: {}", api.session_id);
+        Ok(())
+    }
 
     #[test]
     fn test_simple() -> JoplinServerResult<()> {
@@ -207,6 +252,19 @@ mod tests {
         assert_eq!(b"testing1".to_vec(), api.get(path)?);
         let delta_result = api.root_delta(None);
         println!("r: {:?}", delta_result);
+        Ok(())
+    }
+
+    #[test]
+    fn test_list() -> JoplinServerResult<()> {
+        let test_config = test_env::read_test_env().joplin_server;
+        let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
+        let path = "test/test-list.md";
+        api.put(path, b"testing1".to_vec())?;
+        let list = api.root_list(None)?;
+        assert!(!list.items.is_empty());
+        let list = api.list("test", None)?;
+        assert!(!list.items.is_empty());
         Ok(())
     }
 }

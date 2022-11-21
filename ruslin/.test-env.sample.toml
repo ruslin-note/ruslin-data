@@ -1,3 +1,5 @@
 [joplin_server]
 host = "https://joplin.test"
 session_id = "123"
+email = "test@test.test"
+password = "password"
