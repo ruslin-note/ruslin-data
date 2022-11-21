@@ -1269,6 +1269,7 @@ dependencies = [
  "r2d2",
  "reqwest",
  "serde",
+ "serde_json",
  "serde_repr",
  "tempfile",
  "thiserror",
