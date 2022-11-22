@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 
-use crate::{schema::sync_items, DateTime, ModelType};
+use crate::{schema::sync_items, DateTimeTimestamp, ModelType};
 use diesel::{
     backend::RawValue,
     deserialize::{self, FromSql},
@@ -73,7 +73,7 @@ impl ToSql<Integer, Sqlite> for SyncTarget {
 pub struct SyncItem {
     pub id: i64,
     pub sync_target: SyncTarget,
-    pub sync_time: DateTime,
+    pub sync_time: DateTimeTimestamp,
     pub item_type: ModelType,
     pub item_id: String,
 }

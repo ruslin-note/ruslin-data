@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 
-use crate::{schema::folders, DateTime};
+use crate::{schema::folders, DateTimeTimestamp};
 use diesel::prelude::*;
 
 use super::ids::FolderID;
@@ -11,13 +11,13 @@ use super::ids::FolderID;
 pub struct Folder {
     pub id: FolderID,
     pub title: String,
-    pub created_time: DateTime,
-    pub updated_time: DateTime,
+    pub created_time: DateTimeTimestamp,
+    pub updated_time: DateTimeTimestamp,
 }
 
 impl Folder {
     pub fn new(title: String) -> Self {
-        let time = DateTime::now();
+        let time = DateTimeTimestamp::now();
         Self {
             id: FolderID::new(),
             title,
@@ -28,7 +28,7 @@ impl Folder {
 
     pub fn updated(&self) -> Self {
         let mut folder = self.clone();
-        folder.updated_time = DateTime::now();
+        folder.updated_time = DateTimeTimestamp::now();
         folder
     }
 }

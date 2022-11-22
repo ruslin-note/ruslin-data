@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use thiserror::Error;
 
-use crate::{DateTime, ModelType};
+use crate::{DateTimeTimestamp, ModelType};
 
 #[cfg(test)]
 mod test_env {
@@ -53,16 +53,16 @@ pub struct LoginResult {
 pub struct PutResult {
     pub id: String,
     pub name: String,
-    pub updated_time: DateTime,
-    pub created_time: Option<DateTime>,
+    pub updated_time: DateTimeTimestamp,
+    pub created_time: Option<DateTimeTimestamp>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FileMetadata {
     pub id: String,
     pub name: String,
-    pub updated_time: DateTime,
-    pub created_time: DateTime,
+    pub updated_time: DateTimeTimestamp,
+    pub created_time: DateTimeTimestamp,
 }
 
 #[derive(Debug, Deserialize)]
@@ -71,8 +71,8 @@ pub struct DeltaItem {
     pub item_id: String,
     pub item_name: String,
     pub r#type: ModelType,
-    pub updated_time: DateTime,
-    pub jop_updated_time: DateTime,
+    pub updated_time: DateTimeTimestamp,
+    pub jop_updated_time: DateTimeTimestamp,
 }
 
 #[derive(Debug, Deserialize)]
@@ -86,7 +86,7 @@ pub struct DeltaResult {
 pub struct FileItem {
     pub id: String,
     pub name: String,
-    pub updated_time: DateTime,
+    pub updated_time: DateTimeTimestamp,
 }
 
 #[derive(Debug, Deserialize)]

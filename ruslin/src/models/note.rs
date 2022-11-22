@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 
-use crate::{schema::notes, DateTime};
+use crate::{schema::notes, DateTimeTimestamp};
 use diesel::prelude::*;
 
 use super::ids::{FolderID, NoteID};
@@ -12,8 +12,8 @@ pub struct AbbrNote {
     pub id: NoteID,
     pub parent_id: FolderID,
     pub title: String,
-    pub created_time: DateTime,
-    pub updated_time: DateTime,
+    pub created_time: DateTimeTimestamp,
+    pub updated_time: DateTimeTimestamp,
 }
 
 #[derive(Clone, Identifiable, Insertable, Queryable, Eq, Debug)]
@@ -24,14 +24,14 @@ pub struct Note {
     pub parent_id: FolderID,
     pub title: String,
     pub body: String,
-    pub created_time: DateTime,
-    pub updated_time: DateTime,
+    pub created_time: DateTimeTimestamp,
+    pub updated_time: DateTimeTimestamp,
 }
 
 impl Note {
     pub fn updated(&self) -> Self {
         let mut note = self.clone();
-        note.updated_time = DateTime::now();
+        note.updated_time = DateTimeTimestamp::now();
         note
     }
 }

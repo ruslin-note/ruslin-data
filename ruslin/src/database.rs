@@ -14,8 +14,8 @@ use std::{
 };
 
 use crate::{
-    database::connection_options::ConnectionOptions, models::Folder, AbbrNote, DateTime, FolderID,
-    ModelType, NewSyncItem, Note, NoteID, SyncTarget,
+    database::connection_options::ConnectionOptions, models::Folder, AbbrNote, DateTimeTimestamp,
+    FolderID, ModelType, NewSyncItem, Note, NoteID, SyncTarget,
 };
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
@@ -198,7 +198,7 @@ impl Database {
         use crate::schema::sync_items;
         diesel::update(sync_items::table)
             .filter(sync_items::item_id.eq(item_id))
-            .set(sync_items::sync_time.eq(DateTime::now()))
+            .set(sync_items::sync_time.eq(DateTimeTimestamp::now()))
             .execute(&mut conn)?;
         Ok(())
     }
