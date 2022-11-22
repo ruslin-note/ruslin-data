@@ -45,6 +45,16 @@ impl ForSyncSerializer {
         self.serialize_datetime_rfc333(k, &dt);
     }
 
+    pub fn serialize_f64(&mut self, k: &str, v: f64) {
+        self.0.push('\n');
+        self.0.push_str(&format!("{k}: {}", v));
+    }
+
+    pub fn serialize_i64(&mut self, k: &str, v: i64) {
+        self.0.push('\n');
+        self.0.push_str(&format!("{k}: {}", v));
+    }
+
     pub fn serialize_bool(&mut self, k: &str, v: bool) {
         self.0.push('\n');
         let v = match v {

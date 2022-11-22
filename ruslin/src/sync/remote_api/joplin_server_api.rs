@@ -1,4 +1,5 @@
-use reqwest::blocking::{Client, RequestBuilder};
+use reqwest::blocking::{Client, RequestBuilder, Response};
+pub use reqwest::StatusCode;
 use reqwest::{Error as ResError, Method};
 use serde::{Deserialize, Serialize};
 
@@ -33,8 +34,13 @@ pub type JoplinServerResult<T> = Result<T, JoplinServerError>;
 
 #[derive(Error, Debug)]
 pub enum JoplinServerError {
-    #[error("res error")]
-    ResError(#[from] ResError),
+    #[error("response error")]
+    ResError {
+        text: String,
+        status_code: StatusCode,
+    },
+    #[error("response inner error")]
+    ResInnerError(#[from] ResError),
 }
 
 #[derive(Debug, Serialize)]
@@ -130,8 +136,8 @@ impl JoplinServerAPI {
         let res = client
             .post(format!("{}/{}", host, "api/sessions"))
             .json(&login_form)
-            .send()?
-            .error_for_status()?;
+            .send()?;
+        let res = Self::check_response(res)?;
         let login_result = res.json::<LoginResult>()?;
         Ok(Self {
             host,
@@ -145,9 +151,20 @@ impl JoplinServerAPI {
             .request_builder(Method::PUT, &format!("{}/content", self.with_path(path)))
             .header("Content-Type", "application/octet-stream")
             .body(bytes)
-            .send()?
-            .error_for_status()?;
+            .send()?;
+        let res = Self::check_response(res)?;
         Ok(res.json()?)
+    }
+
+    pub fn check_response(res: Response) -> JoplinServerResult<Response> {
+        let status_code = res.status();
+        if status_code.is_success() {
+            return Ok(res);
+        }
+        Err(JoplinServerError::ResError {
+            text: res.text().ok().unwrap_or_default(),
+            status_code,
+        })
     }
 
     pub fn put(&self, path: &str, s: String) -> JoplinServerResult<PutResult> {
@@ -155,31 +172,32 @@ impl JoplinServerAPI {
             .request_builder(Method::PUT, &format!("{}/content", self.with_path(path)))
             .header("Content-Type", "application/octet-stream")
             .body(s)
-            .send()?
-            .error_for_status()?;
+            .send()?;
+        let res = Self::check_response(res)?;
         Ok(res.json()?)
     }
 
     pub fn delete(&self, path: &str) -> JoplinServerResult<()> {
-        self.request_builder(Method::DELETE, &self.with_path(path))
-            .send()?
-            .error_for_status()?;
+        let res = self
+            .request_builder(Method::DELETE, &self.with_path(path))
+            .send()?;
+        Self::check_response(res)?;
         Ok(())
     }
 
     pub fn get(&self, path: &str) -> JoplinServerResult<Vec<u8>> {
         let res = self
             .request_builder(Method::GET, &format!("{}/content", self.with_path(path)))
-            .send()?
-            .error_for_status()?;
+            .send()?;
+        let res = Self::check_response(res)?;
         Ok(res.bytes()?.to_vec())
     }
 
     pub fn metadata(&self, path: &str) -> JoplinServerResult<FileMetadata> {
         let res = self
             .request_builder(Method::GET, &self.with_path(path))
-            .send()?
-            .error_for_status()?;
+            .send()?;
+        let res = Self::check_response(res)?;
         Ok(res.json()?)
     }
 
@@ -193,7 +211,8 @@ impl JoplinServerAPI {
         if let Some(cursor) = cursor {
             builder = builder.query(&[("cursor", cursor)]);
         }
-        let res = builder.send()?.error_for_status()?;
+        let res = builder.send()?;
+        let res = Self::check_response(res)?;
         Ok(res.json()?)
     }
 
@@ -212,14 +231,15 @@ impl JoplinServerAPI {
         if let Some(cursor) = cursor {
             builder = builder.query(&[("cursor", cursor)]);
         }
-        let res = builder.send()?.error_for_status()?;
+        let res = builder.send()?;
+        let res = Self::check_response(res)?;
         Ok(res.json()?)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    // use crate::{sync::SerializeForSync, Folder};
+    use crate::{sync::SerializeForSync, Folder, Note};
 
     use super::{test_env, JoplinServerAPI, JoplinServerResult};
 
@@ -284,6 +304,31 @@ mod tests {
         assert!(!list.items.is_empty());
         let list = api.list("test", None)?;
         assert!(!list.items.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_note() -> JoplinServerResult<()> {
+        let test_config = test_env::read_test_env().joplin_server;
+        let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
+        let test_folder = Folder::new("TestFolder".to_string(), None);
+        let test_folder_path = test_folder.md_file_path();
+        api.put(
+            &test_folder_path,
+            test_folder.serialize().unwrap().into_string(),
+        )?;
+        let test_note = Note::new(
+            test_folder.id,
+            "TestNote".to_string(),
+            "# Test Title\n\n Content".to_string(),
+        );
+        let test_note_path = test_note.md_file_path();
+        api.put(
+            &test_note_path,
+            test_note.serialize().unwrap().into_string(),
+        )?;
+        api.delete(&test_folder_path)?;
+        api.delete(&test_note_path)?;
         Ok(())
     }
 }

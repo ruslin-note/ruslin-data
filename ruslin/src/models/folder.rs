@@ -67,6 +67,10 @@ impl Folder {
         folder.updated_time = DateTimeTimestamp::now();
         folder
     }
+
+    pub fn md_file_path(&self) -> String {
+        format!("{}.md", self.id.as_str())
+    }
 }
 
 impl Hash for Folder {
@@ -93,7 +97,7 @@ impl SerializeForSync for Folder {
         ser.serialize_bool("encryption_applied", self.encryption_applied);
         ser.serialize_opt_str("parent_id", self.parent_id.as_ref().map(|id| id.as_str()));
         ser.serialize_bool("is_shared", self.is_shared);
-        ser.serialize_str("share_id", "");
+        ser.serialize_str("share_id", &self.share_id);
         ser.serialize_str("master_key_id", &self.master_key_id);
         ser.serialize_str("icon", &self.icon);
         ser.serialize_type("type_", ModelType::Folder);
