@@ -8,7 +8,7 @@ CREATE TABLE folders(
     encryption_cipher_text TEXT NOT NULL DEFAULT "",
     encryption_applied BOOLEAN NOT NULL DEFAULT FALSE,
     parent_id TEXT DEFAULT NULL,
-    is_shared INT BOOLEAN NULL DEFAULT FALSE,
+    is_shared BOOLEAN NOT NULL DEFAULT FALSE,
     share_id TEXT NOT NULL DEFAULT "",
     master_key_id TEXT NOT NULL DEFAULT "",
     icon TEXT NOT NULL DEFAULT ""

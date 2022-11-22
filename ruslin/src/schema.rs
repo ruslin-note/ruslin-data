@@ -11,7 +11,7 @@ diesel::table! {
         encryption_cipher_text -> Text,
         encryption_applied -> Bool,
         parent_id -> Nullable<Text>,
-        is_shared -> Nullable<Integer>,
+        is_shared -> Bool,
         share_id -> Text,
         master_key_id -> Text,
         icon -> Text,

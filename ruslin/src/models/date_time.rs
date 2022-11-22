@@ -77,6 +77,16 @@ impl DateTimeRFC333 {
     pub fn timestamp_millis(&self) -> i64 {
         self.0.timestamp_millis()
     }
+
+    pub fn as_string(&self) -> String {
+        self.0.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+    }
+
+    pub fn from_raw_str(s: &str) -> Self {
+        let dt = chrono::DateTime::parse_from_rfc3339(s).unwrap();
+        let dt = dt.with_timezone(&Utc);
+        Self(dt)
+    }
 }
 
 impl From<DateTimeTimestamp> for DateTimeRFC333 {

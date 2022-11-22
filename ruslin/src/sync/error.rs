@@ -11,4 +11,15 @@ pub enum SyncError {
     FileNotExists,
     #[error("unknown")]
     Unknown,
+    #[error("serialize error")]
+    SerializeError(String),
+}
+
+impl serde::ser::Error for SyncError {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: std::fmt::Display,
+    {
+        Self::SerializeError(msg.to_string())
+    }
 }

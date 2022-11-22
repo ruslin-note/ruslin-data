@@ -26,6 +26,10 @@ impl FolderID {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
+    pub fn from_raw_str(s: &str) -> Self {
+        Self(s.to_string())
+    }
 }
 
 impl FromSql<Text, Sqlite> for FolderID {

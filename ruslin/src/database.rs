@@ -84,6 +84,15 @@ impl Database {
                 folders::title,
                 folders::created_time,
                 folders::updated_time,
+                folders::user_created_time,
+                folders::user_updated_time,
+                folders::encryption_cipher_text,
+                folders::encryption_applied,
+                folders::parent_id,
+                folders::is_shared,
+                folders::share_id,
+                folders::master_key_id,
+                folders::icon,
             ))
             .load(&mut conn)?)
     }
@@ -233,7 +242,7 @@ mod tests {
     }
 
     fn get_folder_1() -> Folder {
-        Folder::new("folder1".to_string())
+        Folder::new("folder1".to_string(), None)
     }
 
     #[test]
