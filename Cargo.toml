@@ -1,5 +1,4 @@
 [workspace]
 members = [
     "ruslin",
-    "ruslin-gtk-desktop",
 ]
