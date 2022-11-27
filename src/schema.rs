@@ -65,8 +65,4 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(
-    folders,
-    notes,
-    sync_items,
-);
+diesel::allow_tables_to_appear_in_same_query!(folders, notes, sync_items,);
