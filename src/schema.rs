@@ -21,7 +21,7 @@ diesel::table! {
 diesel::table! {
     notes (id) {
         id -> Text,
-        parent_id -> Text,
+        parent_id -> Nullable<Text>,
         title -> Text,
         body -> Text,
         created_time -> BigInt,
@@ -65,4 +65,8 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(folders, notes, sync_items,);
+diesel::allow_tables_to_appear_in_same_query!(
+    folders,
+    notes,
+    sync_items,
+);

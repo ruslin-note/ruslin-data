@@ -318,7 +318,7 @@ mod tests {
             test_folder.serialize().unwrap().into_string(),
         )?;
         let test_note = Note::new(
-            test_folder.id,
+            Some(test_folder.id),
             "TestNote".to_string(),
             "# Test Title\n\n Content".to_string(),
         );

@@ -14,7 +14,7 @@ use super::ids::{FolderID, NoteID};
 #[diesel(table_name = notes)]
 pub struct AbbrNote {
     pub id: NoteID,
-    pub parent_id: FolderID,
+    pub parent_id: Option<FolderID>,
     pub title: String,
     pub created_time: DateTimeTimestamp,
     pub updated_time: DateTimeTimestamp,
@@ -25,7 +25,7 @@ pub struct AbbrNote {
 #[diesel(table_name = notes)]
 pub struct Note {
     pub id: NoteID,
-    pub parent_id: FolderID,
+    pub parent_id: Option<FolderID>,
     pub title: String,
     pub body: String,
     pub created_time: DateTimeTimestamp,
@@ -54,11 +54,8 @@ pub struct Note {
     pub master_key_id: String,
 }
 
-// source: joplin
-// source_application: net.cozic.joplin-cli
-
 impl Note {
-    pub fn new(parent_id: FolderID, title: String, body: String) -> Self {
+    pub fn new(parent_id: Option<FolderID>, title: String, body: String) -> Self {
         let dt = DateTimeTimestamp::now();
         Self {
             id: NoteID::new(),
@@ -133,7 +130,7 @@ impl SerializeForSync for Note {
     fn serialize(&self) -> SyncResult<ForSyncSerializer> {
         let mut ser = ForSyncSerializer::new(&self.title, Some(&self.body));
         ser.serialize_str("id", self.id.as_str());
-        ser.serialize_str("parent_id", self.parent_id.as_str());
+        ser.serialize_opt_str("parent_id", self.parent_id.as_ref().map(|id| id.as_str()));
         ser.serialize_str("title", &self.title);
         ser.serialize_datetime("created_time", self.created_time);
         ser.serialize_datetime("updated_time", self.updated_time);

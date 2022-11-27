@@ -1,4 +1,4 @@
-use ruslin::sync::{FileApi, FileApiDriverLocal, SyncResult};
+use ruslin_data::sync::{FileApi, FileApiDriverLocal, SyncResult};
 use tempfile::tempdir;
 
 fn run_with_file_api(

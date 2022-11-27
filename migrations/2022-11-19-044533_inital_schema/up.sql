@@ -21,7 +21,7 @@ CREATE INDEX folders_updated_time ON folders (updated_time);
 
 CREATE TABLE notes(
     id TEXT PRIMARY KEY NOT NULL,
-    parent_id TEXT NOT NULL DEFAULT "",
+    parent_id TEXT DEFAULT NULL,
     title TEXT NOT NULL DEFAULT "",
     body TEXT NOT NULL DEFAULT "",
     created_time BIGINT NOT NULL,
@@ -51,6 +51,7 @@ CREATE TABLE notes(
 );
 
 CREATE INDEX notes_title ON notes (title);
+CREATE INDEX notes_parent_id ON notes (parent_id);
 CREATE INDEX notes_updated_time ON notes (updated_time);
 CREATE INDEX notes_is_conflict ON notes (is_conflict);
 CREATE INDEX notes_is_todo ON notes (is_todo);
