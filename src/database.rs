@@ -20,6 +20,7 @@ use crate::{
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
 
+#[derive(Debug)]
 pub struct Database {
     connection_pool: Pool<ConnectionManager<SqliteConnection>>,
     _path: PathBuf,
