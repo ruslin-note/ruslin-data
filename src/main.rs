@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use ruslin::{Database, DatabaseResult, Folder};
+use ruslin_data::{Database, DatabaseResult, Folder};
 
 fn main() -> DatabaseResult<()> {
     let data_dir = Path::new("./");
