@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use diesel::{
     backend::RawValue,
     deserialize::{self, FromSql},
@@ -37,6 +37,14 @@ impl DateTimeTimestamp {
 
     pub fn timestamp_millis(&self) -> i64 {
         self.0
+    }
+
+    pub fn format_ymd_hms(&self) -> String {
+        let utc = NaiveDateTime::from_timestamp_millis(self.0).unwrap();
+        chrono::Local
+            .from_utc_datetime(&utc)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
     }
 }
 
