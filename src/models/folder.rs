@@ -68,6 +68,14 @@ impl Folder {
         folder
     }
 
+    pub fn get_title(&self) -> &str {
+        &self.title
+    }
+
+    pub fn set_title(&mut self, title: &str) {
+        self.title = title.replace("\n", " ");
+    }
+
     pub fn md_file_path(&self) -> String {
         format!("{}.md", self.id.as_str())
     }

@@ -26,7 +26,7 @@ pub struct AbbrNote {
 pub struct Note {
     pub id: NoteID,
     pub parent_id: Option<FolderID>,
-    pub title: String,
+    title: String,
     pub body: String,
     pub created_time: DateTimeTimestamp,
     pub updated_time: DateTimeTimestamp,
@@ -89,16 +89,22 @@ impl Note {
         }
     }
 
-    pub fn md_file_path(&self) -> String {
-        format!("{}.md", self.id.as_str())
-    }
-}
-
-impl Note {
     pub fn updated(&self) -> Self {
         let mut note = self.clone();
         note.updated_time = DateTimeTimestamp::now();
         note
+    }
+
+    pub fn get_title(&self) -> &str {
+        &self.title
+    }
+
+    pub fn set_title(&mut self, title: &str) {
+        self.title = title.replace("\n", " ");
+    }
+
+    pub fn md_file_path(&self) -> String {
+        format!("{}.md", self.id.as_str())
     }
 }
 
