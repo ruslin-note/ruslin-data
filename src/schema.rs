@@ -1,6 +1,15 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    deleted_items (id) {
+        id -> Integer,
+        item_type -> Integer,
+        item_id -> Text,
+        deleted_time -> BigInt,
+    }
+}
+
+diesel::table! {
     folders (id) {
         id -> Text,
         title -> Text,
@@ -38,7 +47,7 @@ diesel::table! {
         source -> Text,
         source_application -> Text,
         application_data -> Text,
-        custom_order -> BigInt,
+        order -> BigInt,
         user_created_time -> BigInt,
         user_updated_time -> BigInt,
         encryption_cipher_text -> Text,
@@ -52,10 +61,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    settings (key) {
+        key -> Text,
+        value -> Text,
+    }
+}
+
+diesel::table! {
     sync_items (id) {
         id -> Integer,
         sync_target -> Integer,
         sync_time -> BigInt,
+        update_time -> BigInt,
         item_type -> Integer,
         item_id -> Text,
         sync_disabled -> Bool,
@@ -65,4 +82,4 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(folders, notes, sync_items,);
+diesel::allow_tables_to_appear_in_same_query!(deleted_items, folders, notes, settings, sync_items,);

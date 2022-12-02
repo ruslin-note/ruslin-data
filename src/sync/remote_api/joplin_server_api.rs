@@ -123,6 +123,7 @@ pub struct ListResult {
     pub has_more: bool,
 }
 
+#[derive(Debug)]
 pub struct JoplinServerAPI {
     host: String,
     client: Client,
@@ -219,11 +220,23 @@ impl JoplinServerAPI {
         Ok(res.bytes().await?.to_vec())
     }
 
-    pub async fn metadata(&self, path: &str) -> JoplinServerResult<FileMetadata> {
+    pub async fn get_text(&self, path: &str) -> JoplinServerResult<String> {
+        let res = self
+            .request_builder(Method::GET, &format!("{}/content", self.with_path(path)))
+            .send()
+            .await?;
+        let res = Self::check_response(res).await?;
+        Ok(res.text().await?)
+    }
+
+    pub async fn metadata(&self, path: &str) -> JoplinServerResult<Option<FileMetadata>> {
         let res = self
             .request_builder(Method::GET, &self.with_path(path))
             .send()
             .await?;
+        if res.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
         let res = Self::check_response(res).await?;
         Ok(res.json().await?)
     }
@@ -262,6 +275,14 @@ impl JoplinServerAPI {
         let res = Self::check_response(res).await?;
         Ok(res.json().await?)
     }
+
+    pub async fn clear_root(&self) -> JoplinServerResult<()> {
+        let list = self.root_list(None).await?;
+        for item in list.items {
+            self.delete(&item.name).await?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -269,6 +290,14 @@ mod tests {
     use crate::{sync::SerializeForSync, Folder, Note};
 
     use super::{test_env, JoplinServerAPI, JoplinServerResult};
+
+    #[tokio::test]
+    async fn test_clear_root() -> JoplinServerResult<()> {
+        let test_config = test_env::read_test_env().joplin_server;
+        let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
+        api.clear_root().await?;
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_login() -> JoplinServerResult<()> {
@@ -287,11 +316,11 @@ mod tests {
         let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
         let path = "testing.bin";
         let create_result = api.put_bytes(path, b"testing1".to_vec()).await?;
-        let create_metadata = api.metadata(path).await?;
+        let create_metadata = api.metadata(path).await?.unwrap();
         assert_eq!(b"testing1".to_vec(), api.get(path).await?);
         let update_result = api.put_bytes(path, b"testing2".to_vec()).await?;
         assert_eq!(b"testing2".to_vec(), api.get(path).await?);
-        let update_metadata = api.metadata(path).await?;
+        let update_metadata = api.metadata(path).await?.unwrap();
         assert!(update_result.created_time.is_none());
         assert_eq!(create_result.id, update_result.id);
         assert_eq!(create_result.name, update_result.name);
@@ -341,22 +370,16 @@ mod tests {
         let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
         let test_folder = Folder::new("TestFolder".to_string(), None);
         let test_folder_path = test_folder.md_file_path();
-        api.put(
-            &test_folder_path,
-            test_folder.serialize().unwrap().into_string(),
-        )
-        .await?;
+        api.put(&test_folder_path, test_folder.serialize().into_string())
+            .await?;
         let test_note = Note::new(
             Some(test_folder.id),
             "TestNote".to_string(),
             "# Test Title\n\n Content".to_string(),
         );
         let test_note_path = test_note.md_file_path();
-        api.put(
-            &test_note_path,
-            test_note.serialize().unwrap().into_string(),
-        )
-        .await?;
+        api.put(&test_note_path, test_note.serialize().into_string())
+            .await?;
         api.delete(&test_folder_path).await?;
         api.delete(&test_note_path).await?;
         Ok(())

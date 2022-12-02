@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use tempfile::TempDir;
 
-use ruslin_data::{Database, DatabaseResult, Folder};
+use ruslin_data::{Database, DatabaseResult, Folder, UpdateSource};
 
 pub struct TestDatabase(pub Database, TempDir);
 
@@ -31,16 +31,16 @@ fn get_folder_1() -> Folder {
 fn test_folder() -> DatabaseResult<()> {
     let db = TestDatabase::temp();
     let mut folder = get_folder_1();
-    db.replace_folder(&folder)?;
+    db.replace_folder(&folder, UpdateSource::LocalEdit)?;
     let load_folders = db.load_folders()?;
     assert_eq!(1, load_folders.len());
     assert_eq!(folder, load_folders[0]);
     folder.title = "folder1a".to_string();
-    db.replace_folder(&folder)?;
+    db.replace_folder(&folder, UpdateSource::LocalEdit)?;
     let load_folders = db.load_folders()?;
     assert_eq!(1, load_folders.len());
     assert_eq!(folder, load_folders[0]);
-    db.delete_folder(&folder.id)?;
+    db.delete_folder(&folder.id, UpdateSource::LocalEdit)?;
     let load_folders = db.load_folders()?;
     assert!(load_folders.is_empty());
     Ok(())

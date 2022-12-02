@@ -40,8 +40,10 @@ impl<D: FileApiDriver> FileApi<D> {
 
     pub async fn stat(&self, path: &str) -> SyncResult<Stat> {
         let mut stat = self.driver.stat(&self.full_path(path)).await?;
-        stat.path = path.to_string();
-        Ok(stat)
+        if let Some(stat) = &mut stat {
+            stat.path = path.to_string();
+        }
+        Ok(stat.unwrap())
     }
 
     pub async fn list(&self, path: &str) -> SyncResult<StatList> {

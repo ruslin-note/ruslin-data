@@ -1,10 +1,12 @@
 mod date_time;
+mod deleted_item;
 mod folder;
-mod ids;
 mod note;
+mod setting;
 mod sync_item;
 
 pub use date_time::*;
+pub use deleted_item::{DeletedItem, NewDeletedItem};
 use diesel::{
     backend::RawValue,
     deserialize::{self, FromSql},
@@ -14,9 +16,9 @@ use diesel::{
     AsExpression, FromSqlRow,
 };
 pub use folder::Folder;
-pub use ids::*;
 pub use note::{AbbrNote, Note};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+pub use setting::{NewSetting, Setting};
 pub use sync_item::{NewSyncItem, SyncItem, SyncTarget};
 
 #[derive(
@@ -52,6 +54,16 @@ pub enum ModelType {
     // Command = 16,
 }
 
+impl From<i32> for ModelType {
+    fn from(val: i32) -> Self {
+        match val {
+            1 => ModelType::Note,
+            2 => ModelType::Folder,
+            _ => panic!("Unrecognized variant {}", val),
+        }
+    }
+}
+
 impl FromSql<Integer, Sqlite> for ModelType {
     fn from_sql(bytes: RawValue<Sqlite>) -> deserialize::Result<Self> {
         match i32::from_sql(bytes)? {
@@ -67,4 +79,8 @@ impl ToSql<Integer, Sqlite> for ModelType {
         out.set_value(*self as i32);
         Ok(IsNull::No)
     }
+}
+
+pub fn new_id() -> String {
+    uuid::Uuid::now_v7().simple().to_string()
 }

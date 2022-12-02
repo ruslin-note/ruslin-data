@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 
-use crate::{schema::sync_items, DateTimeTimestamp, ModelType};
+use crate::{schema::sync_items, DateTimeTimestamp, ModelType, UpdateSource};
 use diesel::{
     backend::RawValue,
     deserialize::{self, FromSql},
@@ -67,15 +67,26 @@ impl ToSql<Integer, Sqlite> for SyncTarget {
     }
 }
 
-#[derive(Clone, Identifiable, Queryable, Eq, Debug)]
+#[derive(Clone, Identifiable, Queryable, Insertable, Eq, Debug)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = sync_items)]
 pub struct SyncItem {
-    pub id: i64,
+    pub id: i32,
     pub sync_target: SyncTarget,
     pub sync_time: DateTimeTimestamp,
+    pub update_time: DateTimeTimestamp,
     pub item_type: ModelType,
     pub item_id: String,
+}
+
+impl SyncItem {
+    pub fn filepath(&self) -> String {
+        format!("{}.md", self.item_id)
+    }
+
+    pub fn never_synced(&self) -> bool {
+        self.sync_time.timestamp_millis() == 0
+    }
 }
 
 impl Hash for SyncItem {
@@ -94,6 +105,24 @@ impl PartialEq for SyncItem {
 #[diesel(table_name = sync_items)]
 pub struct NewSyncItem<'a> {
     pub sync_target: SyncTarget,
+    pub sync_time: DateTimeTimestamp,
+    pub update_time: DateTimeTimestamp,
     pub item_type: ModelType,
     pub item_id: &'a str,
+}
+
+impl<'a> NewSyncItem<'a> {
+    pub fn new(item_type: ModelType, item_id: &'a str, update_source: UpdateSource) -> Self {
+        let (sync_time, update_time) = match update_source {
+            UpdateSource::RemoteSync => (DateTimeTimestamp::now(), DateTimeTimestamp::zero()),
+            UpdateSource::LocalEdit => (DateTimeTimestamp::zero(), DateTimeTimestamp::now()),
+        };
+        Self {
+            sync_target: SyncTarget::JoplinServer,
+            sync_time,
+            update_time,
+            item_type,
+            item_id,
+        }
+    }
 }

@@ -1,6 +1,9 @@
 use std::ops::Deref;
 
-use ruslin_data::sync::{FileApi, FileApiDriverLocal, SyncResult};
+use ruslin_data::{
+    sync::{FileApi, FileApiDriverLocal, SyncResult},
+    DateTimeTimestamp,
+};
 use tempfile::TempDir;
 
 pub struct TestFileApiDriverLocal(FileApi<FileApiDriverLocal>, TempDir);
@@ -40,12 +43,12 @@ async fn test_get_a_file_info() -> SyncResult<()> {
 
     let stat = file_api.stat("test1.txt").await?;
     assert_eq!("test1.txt", stat.path);
-    assert!(stat.updated_time > 0);
+    assert!(stat.updated_time > DateTimeTimestamp::zero());
     assert!(!stat.is_dir);
 
     let stat = file_api.stat("sub/test2.txt").await?;
     assert_eq!("sub/test2.txt", stat.path);
-    assert!(stat.updated_time > 0);
+    assert!(stat.updated_time > DateTimeTimestamp::zero());
     assert!(!stat.is_dir);
 
     Ok(())

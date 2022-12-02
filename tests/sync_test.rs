@@ -25,8 +25,16 @@ pub fn read_test_env() -> TestEnv {
     toml::from_str(env_toml).unwrap()
 }
 
+fn init() {
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Debug)
+        .try_init();
+}
+
 #[tokio::test]
 async fn test_delta() {
+    init();
     let db = TestDatabase::temp();
     let joplin_server_config = read_test_env().joplin_server;
     let api = JoplinServerAPI::login(

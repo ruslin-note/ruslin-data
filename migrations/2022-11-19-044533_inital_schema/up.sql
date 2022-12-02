@@ -38,7 +38,7 @@ CREATE TABLE notes(
     source TEXT NOT NULL DEFAULT "",
     source_application TEXT NOT NULL DEFAULT "",
     application_data TEXT NOT NULL DEFAULT "",
-    custom_order BIGINT NOT NULL DEFAULT 0,
+    `order` BIGINT NOT NULL DEFAULT 0,
     user_created_time BIGINT NOT NULL DEFAULT 0,
     user_updated_time BIGINT NOT NULL DEFAULT 0,
     encryption_cipher_text TEXT NOT NULL DEFAULT "",
@@ -55,7 +55,7 @@ CREATE INDEX notes_parent_id ON notes (parent_id);
 CREATE INDEX notes_updated_time ON notes (updated_time);
 CREATE INDEX notes_is_conflict ON notes (is_conflict);
 CREATE INDEX notes_is_todo ON notes (is_todo);
-CREATE INDEX notes_custom_order ON notes (custom_order);
+CREATE INDEX notes_order ON notes (`order`);
 
 ---
 
@@ -63,6 +63,7 @@ CREATE TABLE sync_items (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     sync_target INT NOT NULL,
     sync_time BIGINT NOT NULL DEFAULT 0,
+    update_time BIGINT NOT NULL DEFAULT 0,
     item_type INT NOT NULL,
     item_id TEXT NOT NULL,
     sync_disabled BOOLEAN NOT NULL DEFAULT FALSE,
@@ -75,3 +76,21 @@ CREATE INDEX sync_items_sync_time ON sync_items (sync_time);
 CREATE INDEX sync_items_sync_target ON sync_items (sync_target);
 CREATE INDEX sync_items_item_type ON sync_items (item_type);
 CREATE INDEX sync_items_item_id ON sync_items (item_id);
+
+---
+
+CREATE TABLE deleted_items (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    item_type INT NOT NULL,
+    item_id TEXT NOT NULL,
+    deleted_time BIGINT NOT NULL
+);
+
+CREATE INDEX deleted_items_item_id ON deleted_items (item_id);
+
+---
+
+CREATE TABLE settings(
+    `key` TEXT NOT NULL PRIMARY KEY,
+    `value` TEXT NOT NULL
+);

@@ -39,9 +39,9 @@ impl FileApiDriver for FileApiDriverLocal {
         todo!()
     }
 
-    async fn stat(&self, path: &str) -> SyncResult<Stat> {
+    async fn stat(&self, path: &str) -> SyncResult<Option<Stat>> {
         let metadata = fs::metadata(path)?;
-        metadata.try_into()
+        metadata.try_into().map(Some)
     }
 
     async fn list(&self, path: &str) -> SyncResult<StatList> {
@@ -100,8 +100,16 @@ impl FileApiDriver for FileApiDriverLocal {
         todo!()
     }
 
+    fn deserializer_delta_context(&self, _s: &str) -> SyncResult<Box<dyn SyncContext>> {
+        todo!()
+    }
+
     async fn clear_root(&self, base_dir: &str) -> SyncResult<()> {
         fs::remove_dir_all(base_dir)?;
         Ok(fs::create_dir(base_dir)?)
+    }
+
+    async fn check_config(&self) -> SyncResult<()> {
+        Ok(())
     }
 }

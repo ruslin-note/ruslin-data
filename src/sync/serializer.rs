@@ -1,9 +1,7 @@
 use crate::{DateTimeRFC333, DateTimeTimestamp, ModelType};
 
-use super::SyncResult;
-
 pub trait SerializeForSync {
-    fn serialize(&self) -> SyncResult<ForSyncSerializer>;
+    fn serialize(&self) -> ForSyncSerializer;
 }
 
 pub struct ForSyncSerializer(String);

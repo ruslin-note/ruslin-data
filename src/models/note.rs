@@ -1,20 +1,19 @@
 use std::hash::{Hash, Hasher};
 
 use crate::{
+    new_id,
     schema::notes,
-    sync::{ForSyncSerializer, SerializeForSync, SyncResult},
+    sync::{DeserializeForSync, ForSyncSerializer, SerializeForSync, SyncResult},
     DateTimeTimestamp, ModelType,
 };
 use diesel::prelude::*;
-
-use super::ids::{FolderID, NoteID};
 
 #[derive(Clone, Identifiable, Insertable, Queryable, Eq, Debug)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = notes)]
 pub struct AbbrNote {
-    pub id: NoteID,
-    pub parent_id: Option<FolderID>,
+    pub id: String,
+    pub parent_id: Option<String>,
     pub title: String,
     pub created_time: DateTimeTimestamp,
     pub updated_time: DateTimeTimestamp,
@@ -24,8 +23,8 @@ pub struct AbbrNote {
 #[diesel(primary_key(id))]
 #[diesel(table_name = notes)]
 pub struct Note {
-    pub id: NoteID,
-    pub parent_id: Option<FolderID>,
+    pub id: String,
+    pub parent_id: Option<String>,
     title: String,
     pub body: String,
     pub created_time: DateTimeTimestamp,
@@ -42,7 +41,7 @@ pub struct Note {
     pub source: String,
     pub source_application: String,
     pub application_data: String,
-    pub custom_order: i64,
+    pub order: i64,
     pub user_created_time: DateTimeTimestamp,
     pub user_updated_time: DateTimeTimestamp,
     pub encryption_cipher_text: String,
@@ -55,10 +54,10 @@ pub struct Note {
 }
 
 impl Note {
-    pub fn new(parent_id: Option<FolderID>, title: String, body: String) -> Self {
+    pub fn new(parent_id: Option<String>, title: String, body: String) -> Self {
         let dt = DateTimeTimestamp::now();
         Self {
-            id: NoteID::new(),
+            id: new_id(),
             parent_id,
             title,
             body,
@@ -76,7 +75,7 @@ impl Note {
             source: "ruslin".to_string(),
             source_application: "app.ruslin.default".to_string(),
             application_data: "".to_string(),
-            custom_order: dt.timestamp_millis(),
+            order: dt.timestamp_millis(),
             user_created_time: dt,
             user_updated_time: dt,
             encryption_cipher_text: "".to_string(),
@@ -133,10 +132,10 @@ impl PartialEq for Note {
 }
 
 impl SerializeForSync for Note {
-    fn serialize(&self) -> SyncResult<ForSyncSerializer> {
+    fn serialize(&self) -> ForSyncSerializer {
         let mut ser = ForSyncSerializer::new(&self.title, Some(&self.body));
         ser.serialize_str("id", self.id.as_str());
-        ser.serialize_opt_str("parent_id", self.parent_id.as_ref().map(|id| id.as_str()));
+        ser.serialize_opt_str("parent_id", self.parent_id.as_deref());
         ser.serialize_str("title", &self.title);
         ser.serialize_datetime("created_time", self.created_time);
         ser.serialize_datetime("updated_time", self.updated_time);
@@ -152,7 +151,7 @@ impl SerializeForSync for Note {
         ser.serialize_str("source", &self.source);
         ser.serialize_str("source_application", &self.source_application);
         ser.serialize_str("application_data", &self.application_data);
-        ser.serialize_i64("custom_order", self.custom_order);
+        ser.serialize_i64("order", self.order);
         ser.serialize_datetime("user_created_time", self.user_created_time);
         ser.serialize_datetime("user_updated_time", self.user_updated_time);
         ser.serialize_str("encryption_cipher_text", &self.encryption_cipher_text);
@@ -163,6 +162,44 @@ impl SerializeForSync for Note {
         ser.serialize_opt_str("conflict_original_id", self.conflict_original_id.as_deref());
         ser.serialize_str("master_key_id", &self.master_key_id);
         ser.serialize_type("type_", ModelType::Note);
-        Ok(ser)
+        ser
+    }
+}
+
+impl DeserializeForSync for Note {
+    fn dserialize(des: &crate::sync::ForSyncDeserializer) -> SyncResult<Self> {
+        assert_eq!(ModelType::Note, des.r#type);
+        Ok(Self {
+            id: des.get_string("id")?,
+            parent_id: des.get_opt_string("parent_id"),
+            title: des.title.to_string(),
+            body: des.body.as_deref().unwrap_or_default().to_string(),
+            created_time: des.get_date_time_timestamp("created_time")?,
+            updated_time: des.get_date_time_timestamp("updated_time")?,
+            is_conflict: des.get_bool("is_conflict")?,
+            latitude: des.get_f64("latitude")?,
+            longitude: des.get_f64("longitude")?,
+            altitude: des.get_f64("longitude")?,
+            author: des.get_opt_string("author").unwrap_or_default(),
+            source_url: des.get_opt_string("source_url").unwrap_or_default(),
+            is_todo: des.get_bool("is_todo")?,
+            todo_due: des.get_bool("todo_due")?,
+            todo_completed: des.get_bool("todo_completed")?,
+            source: des.get_opt_string("source").unwrap_or_default(),
+            source_application: des.get_opt_string("source_application").unwrap_or_default(),
+            application_data: des.get_opt_string("application_data").unwrap_or_default(),
+            order: des.get_i64("order")?,
+            user_created_time: des.get_date_time_timestamp("user_created_time")?,
+            user_updated_time: des.get_date_time_timestamp("user_updated_time")?,
+            encryption_cipher_text: des
+                .get_opt_string("encryption_cipher_text")
+                .unwrap_or_default(),
+            encryption_applied: des.get_bool("encryption_applied")?,
+            markup_language: des.get_bool("markup_language")?,
+            is_shared: des.get_bool("is_shared")?,
+            share_id: des.get_opt_string("share_id").unwrap_or_default(),
+            conflict_original_id: des.get_opt_string("conflict_original_id"),
+            master_key_id: des.get_opt_string("master_key_id").unwrap_or_default(),
+        })
     }
 }

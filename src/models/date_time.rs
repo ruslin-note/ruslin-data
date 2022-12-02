@@ -31,6 +31,10 @@ impl DateTimeTimestamp {
         Self(Utc::now().naive_utc().timestamp_millis())
     }
 
+    pub fn zero() -> Self {
+        Self(0)
+    }
+
     pub fn from_timestamp_millis(t: i64) -> Self {
         Self(t)
     }

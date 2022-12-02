@@ -3,19 +3,71 @@ mod models;
 mod schema;
 pub mod sync;
 
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
-pub use database::{Database, DatabaseError, DatabaseResult};
+pub use database::{Database, DatabaseError, DatabaseResult, UpdateSource};
 pub use models::*;
+use parking_lot::RwLock;
+use sync::{
+    remote_api::JoplinServerAPI, FileApiDriver, FileApiDriverJoplinServer, SyncConfig, SyncError,
+    SyncResult, Synchronizer,
+};
 
 #[derive(Debug)]
 pub struct RuslinData {
-    pub db: Database,
+    pub db: Arc<Database>,
+    pub sync_config: RwLock<Option<SyncConfig>>,
 }
 
 impl RuslinData {
-    pub fn new(data_dir: &Path) -> DatabaseResult<Self> {
-        let db = Database::new(data_dir)?;
-        Ok(Self { db })
+    pub fn new(data_dir: &Path) -> SyncResult<Self> {
+        let db = Arc::new(Database::new(data_dir)?);
+        let sync_config = db.get_setting_value(Setting::FILE_API_SYNC_CONFIG)?;
+        let sync_config = RwLock::new(match sync_config {
+            Some(c) => serde_json::from_str(&c.value)?,
+            None => None,
+        });
+        Ok(Self { db, sync_config })
+    }
+
+    pub async fn sync(&self) -> SyncResult<()> {
+        let sync_config = self.sync_config.read().clone();
+        let sync_config = sync_config.ok_or(SyncError::SyncConfigNotExists)?;
+        let file_api_driver = match &sync_config {
+            SyncConfig::JoplinServer {
+                host,
+                email,
+                password,
+            } => {
+                let api = JoplinServerAPI::login(host, email, password).await?;
+                Box::new(FileApiDriverJoplinServer::new(api))
+            }
+        };
+        let synchronizer = Synchronizer::new(self.db.clone(), file_api_driver);
+        synchronizer.start().await
+    }
+
+    pub fn sync_exists(&self) -> bool {
+        self.sync_config.read().is_some()
+    }
+
+    pub async fn save_sync_config(&self, sync_config: SyncConfig) -> SyncResult<()> {
+        match &sync_config {
+            SyncConfig::JoplinServer {
+                host,
+                email,
+                password,
+            } => {
+                let api = JoplinServerAPI::login(host, email, password).await?;
+                let file_api = FileApiDriverJoplinServer::new(api);
+                file_api.check_config().await?;
+            }
+        };
+        self.db.replace_setting(
+            Setting::FILE_API_SYNC_CONFIG,
+            &serde_json::to_string(&sync_config).unwrap(),
+        )?;
+        self.sync_config.write().replace(sync_config);
+        Ok(())
     }
 }

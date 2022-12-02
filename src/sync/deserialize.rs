@@ -1,11 +1,14 @@
 use std::{collections::HashMap, str::FromStr};
 
+use crate::{DateTimeRFC333, DateTimeTimestamp, ModelType};
+
 use super::{SyncError, SyncResult};
 
 pub struct ForSyncDeserializer {
     pub title: String,
     pub body: Option<String>,
     pub kvs: HashMap<String, String>,
+    pub r#type: ModelType,
 }
 
 impl FromStr for ForSyncDeserializer {
@@ -38,7 +41,81 @@ impl FromStr for ForSyncDeserializer {
         } else {
             None
         };
-        Ok(Self { title, body, kvs })
+        let r#type: i32 = kvs.get("type_").unwrap().parse().unwrap();
+        Ok(Self {
+            title,
+            body,
+            kvs,
+            r#type: ModelType::from(r#type),
+        })
+    }
+}
+
+impl ForSyncDeserializer {
+    pub fn get_updated_time(&self) -> SyncResult<DateTimeTimestamp> {
+        self.get_date_time_timestamp("updated_time")
+    }
+}
+
+impl ForSyncDeserializer {
+    pub fn get_string(&self, k: &str) -> SyncResult<String> {
+        self.kvs
+            .get(k)
+            .ok_or(SyncError::DeserializeError {
+                key: k.to_string(),
+                val: self.get_opt_string(k).unwrap_or_default(),
+            })
+            .map(|s| s.to_string())
+    }
+
+    pub fn get_opt_string(&self, k: &str) -> Option<String> {
+        self.kvs.get(k).map(|s| s.to_string())
+    }
+
+    pub fn get_str(&self, k: &str) -> SyncResult<&str> {
+        self.kvs
+            .get(k)
+            .ok_or(SyncError::DeserializeError {
+                key: k.to_string(),
+                val: self.get_opt_string(k).unwrap_or_default(),
+            })
+            .map(|s| s.as_str())
+    }
+
+    pub fn get_opt_str(&self, k: &str) -> Option<&str> {
+        self.kvs.get(k).map(|s| s.as_str())
+    }
+
+    pub fn get_date_time_timestamp(&self, k: &str) -> SyncResult<DateTimeTimestamp> {
+        self.get_str(k)
+            .map(DateTimeRFC333::from_raw_str)
+            .map(|t| t.into())
+    }
+
+    pub fn get_bool(&self, k: &str) -> SyncResult<bool> {
+        self.get_str(k).map(|s| s == "1")
+    }
+
+    pub fn get_f64(&self, k: &str) -> SyncResult<f64> {
+        self.get_str(k).and_then(|s| {
+            s.parse::<f64>().map_err(|_| SyncError::DeserializeError {
+                key: k.to_string(),
+                val: self.get_opt_string(k).unwrap_or_default(),
+            })
+        })
+    }
+
+    pub fn get_i64(&self, k: &str) -> SyncResult<i64> {
+        self.get_str(k).and_then(|s| {
+            s.parse::<i64>().map_err(|_| SyncError::DeserializeError {
+                key: k.to_string(),
+                val: self.get_opt_string(k).unwrap_or_default(),
+            })
+        })
+    }
+
+    pub fn get_opt_i64(&self, k: &str) -> Option<i64> {
+        self.get_i64(k).ok()
     }
 }
 

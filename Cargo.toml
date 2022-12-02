@@ -11,6 +11,7 @@ chrono = "0.4.23"
 diesel = { version = "2.0", features = ["sqlite", "chrono", "r2d2", "uuid", "extras"] }
 diesel_migrations = { version = "2.0.0", features = ["sqlite"] }
 log = "0.4.17"
+parking_lot = "0.12.1"
 r2d2 = "0.8.10"
 reqwest = { version = "0.11.13", features = ["json"] }
 serde = { version = "1.0.147", features = ["derive"] }
@@ -21,5 +22,6 @@ tokio = { version = "1.22.0", features = ["full"] }
 uuid = { version = "1.2.1", features = ["std", "v7"] }
 
 [dev-dependencies]
+env_logger = "0.10.0"
 tempfile = "3.3.0"
 toml = "0.5.9"

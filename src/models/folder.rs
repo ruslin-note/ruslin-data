@@ -1,13 +1,12 @@
 use std::hash::{Hash, Hasher};
 
 use crate::{
+    new_id,
     schema::folders,
-    sync::{ForSyncSerializer, SerializeForSync, SyncResult},
+    sync::{DeserializeForSync, ForSyncSerializer, SerializeForSync, SyncResult},
     DateTimeTimestamp, ModelType,
 };
 use diesel::prelude::*;
-
-use super::ids::FolderID;
 
 // #[repr(i32)]
 // enum FolderIconType {
@@ -23,11 +22,27 @@ use super::ids::FolderID;
 //     dataUrl: String,
 // }
 
+pub type SelectionType = (
+    folders::columns::id,
+    folders::columns::title,
+    folders::columns::created_time,
+    folders::columns::updated_time,
+    folders::columns::user_created_time,
+    folders::columns::user_updated_time,
+    folders::columns::encryption_cipher_text,
+    folders::columns::encryption_applied,
+    folders::columns::parent_id,
+    folders::columns::is_shared,
+    folders::columns::share_id,
+    folders::columns::master_key_id,
+    folders::columns::icon,
+);
+
 #[derive(Clone, Identifiable, Insertable, Queryable, Eq, Debug)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = folders)]
 pub struct Folder {
-    pub id: FolderID,
+    pub id: String,
     pub title: String,
     pub created_time: DateTimeTimestamp,
     pub updated_time: DateTimeTimestamp,
@@ -35,7 +50,7 @@ pub struct Folder {
     pub user_updated_time: DateTimeTimestamp,
     pub encryption_cipher_text: String,
     pub encryption_applied: bool,
-    pub parent_id: Option<FolderID>,
+    pub parent_id: Option<String>,
     pub is_shared: bool,
     pub share_id: String,
     pub master_key_id: String,
@@ -43,10 +58,10 @@ pub struct Folder {
 }
 
 impl Folder {
-    pub fn new(title: String, parent_id: Option<FolderID>) -> Self {
+    pub fn new(title: String, parent_id: Option<String>) -> Self {
         let time = DateTimeTimestamp::now();
         Self {
-            id: FolderID::new(),
+            id: new_id(),
             title,
             created_time: time,
             updated_time: time,
@@ -79,6 +94,22 @@ impl Folder {
     pub fn md_file_path(&self) -> String {
         format!("{}.md", self.id.as_str())
     }
+
+    pub const SELECTION: SelectionType = (
+        folders::id,
+        folders::title,
+        folders::created_time,
+        folders::updated_time,
+        folders::user_created_time,
+        folders::user_updated_time,
+        folders::encryption_cipher_text,
+        folders::encryption_applied,
+        folders::parent_id,
+        folders::is_shared,
+        folders::share_id,
+        folders::master_key_id,
+        folders::icon,
+    );
 }
 
 impl Hash for Folder {
@@ -94,7 +125,7 @@ impl PartialEq for Folder {
 }
 
 impl SerializeForSync for Folder {
-    fn serialize(&self) -> SyncResult<ForSyncSerializer> {
+    fn serialize(&self) -> ForSyncSerializer {
         let mut ser = ForSyncSerializer::new(&self.title, None);
         ser.serialize_str("id", self.id.as_str());
         ser.serialize_datetime("created_time", self.created_time);
@@ -103,26 +134,53 @@ impl SerializeForSync for Folder {
         ser.serialize_datetime("user_updated_time", self.user_updated_time);
         ser.serialize_str("encryption_cipher_text", &self.encryption_cipher_text);
         ser.serialize_bool("encryption_applied", self.encryption_applied);
-        ser.serialize_opt_str("parent_id", self.parent_id.as_ref().map(|id| id.as_str()));
+        ser.serialize_opt_str("parent_id", self.parent_id.as_deref());
         ser.serialize_bool("is_shared", self.is_shared);
         ser.serialize_str("share_id", &self.share_id);
         ser.serialize_str("master_key_id", &self.master_key_id);
         ser.serialize_str("icon", &self.icon);
         ser.serialize_type("type_", ModelType::Folder);
-        Ok(ser)
+        ser
+    }
+}
+
+impl DeserializeForSync for Folder {
+    fn dserialize(des: &crate::sync::ForSyncDeserializer) -> SyncResult<Self> {
+        Ok(Self {
+            id: des.get_string("id")?,
+            title: des.title.to_string(),
+            created_time: des.get_date_time_timestamp("created_time")?,
+            updated_time: des.get_date_time_timestamp("updated_time")?,
+            user_created_time: des.get_date_time_timestamp("user_created_time")?,
+            user_updated_time: des.get_date_time_timestamp("user_updated_time")?,
+            encryption_cipher_text: des
+                .get_opt_string("encryption_cipher_text")
+                .unwrap_or_default(),
+            encryption_applied: des.get_bool("encryption_applied")?,
+            parent_id: des.get_opt_string("parent_id"),
+            is_shared: des.get_bool("is_shared")?,
+            share_id: des.get_opt_string("share_id").unwrap_or_default(),
+            master_key_id: des.get_opt_string("share_id").unwrap_or_default(),
+            icon: des.get_opt_string("share_id").unwrap_or_default(),
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{sync::SerializeForSync, DateTimeRFC333, DateTimeTimestamp, Folder, FolderID};
+    use std::str::FromStr;
+
+    use crate::{
+        sync::{DeserializeForSync, ForSyncDeserializer, SerializeForSync},
+        DateTimeRFC333, DateTimeTimestamp, Folder,
+    };
 
     #[test]
-    fn test_serialize_folder() {
+    fn test_serialize_and_dserialize_folder() {
         let dt = DateTimeRFC333::from_raw_str("2022-11-20T05:27:50.593Z");
         let dt: DateTimeTimestamp = dt.into();
         let folder = Folder {
-            id: FolderID::from_raw_str("fd7d741357e2451283166354c512df3b"),
+            id: "fd7d741357e2451283166354c512df3b".to_string(),
             title: "Folder1".to_string(),
             created_time: dt,
             updated_time: dt,
@@ -136,7 +194,7 @@ mod tests {
             master_key_id: "".to_string(),
             icon: "".to_string(),
         };
-        let binding = folder.serialize().unwrap();
+        let binding = folder.serialize();
         let serialize_result = binding.as_str();
         let expected_str = "Folder1
 
@@ -154,5 +212,8 @@ master_key_id:
 icon: 
 type_: 2";
         assert_eq!(expected_str, serialize_result);
+        let des = ForSyncDeserializer::from_str(expected_str).unwrap();
+        let des_folder = Folder::dserialize(&des).unwrap();
+        assert_eq!(folder, des_folder);
     }
 }

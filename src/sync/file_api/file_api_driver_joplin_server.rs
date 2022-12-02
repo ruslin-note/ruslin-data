@@ -1,16 +1,17 @@
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 
 use crate::sync::{
     remote_api::{DeltaItem, JoplinServerAPI},
-    SyncResult,
+    SyncError, SyncResult,
 };
 
 use super::{
     file_api_driver::{DeltaList, RemoteItem, SyncContext},
-    FileApiDriver,
+    FileApiDriver, Stat,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct JoplinServerSyncContext {
     cursor: String,
 }
@@ -19,8 +20,13 @@ impl SyncContext for JoplinServerSyncContext {
     fn to_joplin_server_sync_context(&self) -> &JoplinServerSyncContext {
         self
     }
+
+    fn to_string(&self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
 }
 
+#[derive(Debug)]
 pub struct FileApiDriverJoplinServer {
     api: JoplinServerAPI,
 }
@@ -49,8 +55,14 @@ impl FileApiDriver for FileApiDriverJoplinServer {
         todo!()
     }
 
-    async fn stat(&self, _path: &str) -> SyncResult<super::Stat> {
-        todo!()
+    async fn stat(&self, path: &str) -> SyncResult<Option<Stat>> {
+        Ok(self.api.metadata(path).await.map(|m| {
+            m.map(|m| Stat {
+                path: m.name,
+                updated_time: m.updated_time,
+                is_dir: false,
+            })
+        })?)
     }
 
     async fn delta(
@@ -66,7 +78,20 @@ impl FileApiDriver for FileApiDriverJoplinServer {
         };
         let delta_items = self.api.delta(path, cursor.as_deref()).await?;
         Ok(DeltaList {
-            items: delta_items.items.into_iter().map(|i| i.into()).collect(),
+            items: delta_items
+                .items
+                .into_iter()
+                .filter_map(|i| {
+                    if i.item_name.starts_with(".resource/")
+                        || i.item_name.starts_with("locks/")
+                        || i.item_name.starts_with("temp/")
+                    {
+                        None
+                    } else {
+                        Some(i.into())
+                    }
+                })
+                .collect(),
             has_more: delta_items.has_more,
             context: delta_items
                 .cursor
@@ -74,20 +99,26 @@ impl FileApiDriver for FileApiDriverJoplinServer {
         })
     }
 
+    fn deserializer_delta_context(&self, s: &str) -> SyncResult<Box<dyn SyncContext>> {
+        let sync_context: JoplinServerSyncContext = serde_json::from_str(s)?;
+        Ok(Box::new(sync_context))
+    }
+
     async fn list(&self, _path: &str) -> SyncResult<super::StatList> {
         todo!()
     }
 
-    async fn get(&self, _path: &str) -> SyncResult<String> {
-        todo!()
+    async fn get(&self, path: &str) -> SyncResult<String> {
+        Ok(self.api.get_text(path).await?)
     }
 
     async fn mkdir(&self, _path: &str) -> SyncResult<()> {
         todo!()
     }
 
-    async fn put(&self, _path: &str, _content: &str) -> SyncResult<()> {
-        todo!()
+    async fn put(&self, path: &str, content: &str) -> SyncResult<()> {
+        self.api.put(path, content.to_string()).await?;
+        Ok(())
     }
 
     async fn multi_put(&self, _items: &[super::file_api_driver::MultiPutItem]) -> SyncResult<()> {
@@ -104,6 +135,17 @@ impl FileApiDriver for FileApiDriverJoplinServer {
 
     async fn clear_root(&self, _base_dir: &str) -> SyncResult<()> {
         todo!()
+    }
+
+    async fn check_config(&self) -> SyncResult<()> {
+        let path = "testing.txt";
+        let content = "testing";
+        self.api.put(path, content.to_string()).await?;
+        if content != self.api.get_text(path).await? {
+            return Err(SyncError::APIError("config error".to_string()));
+        }
+        self.api.delete(path).await?;
+        Ok(())
     }
 }
 
