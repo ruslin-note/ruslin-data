@@ -13,6 +13,8 @@ pub enum SyncError {
     Unknown,
     #[error("serialize error")]
     SerializeError(String),
+    #[error("api error")]
+    APIError(String),
 }
 
 impl serde::ser::Error for SyncError {

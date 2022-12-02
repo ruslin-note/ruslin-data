@@ -1,8 +1,10 @@
+use async_trait::async_trait;
+
 use crate::sync::{SyncError, SyncResult};
 
 use super::{
-    file_api_driver::{self, ListOptions, Source, Stat, StatList},
-    FileApiDriver,
+    file_api_driver::{Stat, StatList},
+    FileApiDriver, SyncContext,
 };
 use std::{
     fs::{self, File},
@@ -19,6 +21,7 @@ impl FileApiDriverLocal {
     }
 }
 
+#[async_trait]
 impl FileApiDriver for FileApiDriverLocal {
     fn supports_multi_put(&self) -> bool {
         false
@@ -36,12 +39,12 @@ impl FileApiDriver for FileApiDriverLocal {
         todo!()
     }
 
-    fn stat(&self, path: &str) -> SyncResult<Stat> {
+    async fn stat(&self, path: &str) -> SyncResult<Stat> {
         let metadata = fs::metadata(path)?;
         metadata.try_into()
     }
 
-    fn list(&self, path: &str, _options: &ListOptions) -> SyncResult<StatList> {
+    async fn list(&self, path: &str) -> SyncResult<StatList> {
         let mut stats: Vec<Stat> = Vec::new();
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -52,53 +55,32 @@ impl FileApiDriver for FileApiDriverLocal {
         Ok(StatList {
             items: stats,
             has_more: false,
+            context: None,
         })
     }
 
-    fn get(
-        &self,
-        path: &str,
-        options: &super::file_api_driver::GetOptions,
-    ) -> SyncResult<Option<String>> {
-        use file_api_driver::GetTarget;
-        match &options.target {
-            GetTarget::File(target_path) => {
-                fs::copy(path, target_path)?;
-                Ok(None)
-            }
-            GetTarget::Text => Ok(Some(fs::read_to_string(path)?)),
-        }
+    async fn get(&self, path: &str) -> SyncResult<String> {
+        Ok(fs::read_to_string(path)?)
     }
 
-    fn mkdir(&self, path: &str) -> SyncResult<()> {
+    async fn mkdir(&self, path: &str) -> SyncResult<()> {
         if Path::new(path).is_dir() {
             return Ok(());
         }
         Ok(fs::create_dir(path)?)
     }
 
-    fn put(&self, path: &str, options: &super::file_api_driver::PutOptions) -> SyncResult<()> {
-        match &options.source {
-            Source::File(from_path) => {
-                fs::copy(from_path, path)?;
-            }
-            Source::Text(content) => {
-                let mut file = File::create(path)?;
-                write!(&mut file, "{}", content)?;
-            }
-        }
+    async fn put(&self, path: &str, content: &str) -> SyncResult<()> {
+        let mut file = File::create(path)?;
+        write!(&mut file, "{}", content)?;
         Ok(())
     }
 
-    fn multi_put(
-        &self,
-        _items: &[super::file_api_driver::MultiPutItem],
-        _options: &super::file_api_driver::PutOptions,
-    ) -> SyncResult<()> {
+    async fn multi_put(&self, _items: &[super::file_api_driver::MultiPutItem]) -> SyncResult<()> {
         unimplemented!()
     }
 
-    fn delete(&self, path: &str) -> SyncResult<()> {
+    async fn delete(&self, path: &str) -> SyncResult<()> {
         let path = Path::new(path);
         if !path.exists() {
             return Err(SyncError::FileNotExists);
@@ -106,11 +88,19 @@ impl FileApiDriver for FileApiDriverLocal {
         Ok(fs::remove_file(path)?)
     }
 
-    fn r#move(&self, old_path: &str, new_path: &str) -> SyncResult<()> {
+    async fn r#move(&self, old_path: &str, new_path: &str) -> SyncResult<()> {
         Ok(fs::rename(old_path, new_path)?)
     }
 
-    fn clear_root(&self, base_dir: &str) -> SyncResult<()> {
+    async fn delta(
+        &self,
+        _path: &str,
+        _ctx: Option<&dyn SyncContext>,
+    ) -> SyncResult<super::file_api_driver::DeltaList> {
+        todo!()
+    }
+
+    async fn clear_root(&self, base_dir: &str) -> SyncResult<()> {
         fs::remove_dir_all(base_dir)?;
         Ok(fs::create_dir(base_dir)?)
     }

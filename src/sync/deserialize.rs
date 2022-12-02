@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
-use super::SyncResult;
+use super::{SyncError, SyncResult};
 
 pub struct ForSyncDeserializer {
     pub title: String,
@@ -8,8 +8,10 @@ pub struct ForSyncDeserializer {
     pub kvs: HashMap<String, String>,
 }
 
-impl ForSyncDeserializer {
-    pub fn from_str(s: &str) -> SyncResult<Self> {
+impl FromStr for ForSyncDeserializer {
+    type Err = SyncError;
+
+    fn from_str(s: &str) -> SyncResult<Self> {
         let mut iter = s.split('\n');
         let mut kvs = HashMap::<String, String>::new();
         while let Some(s) = iter.next_back() {
@@ -28,7 +30,7 @@ impl ForSyncDeserializer {
         iter.next();
         let body: Option<String> = if let Some(s) = iter.next() {
             let mut string = String::from(s);
-            while let Some(s) = iter.next() {
+            for s in iter {
                 string.push('\n');
                 string.push_str(s);
             }
@@ -47,7 +49,7 @@ pub trait DeserializeForSync: Sized {
 #[cfg(test)]
 mod tests {
     use super::ForSyncDeserializer;
-
+    use std::str::FromStr;
     #[test]
     fn test_dserialize_without_body() {
         let s = r#"Folder1

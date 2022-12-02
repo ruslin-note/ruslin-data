@@ -100,7 +100,7 @@ impl Note {
     }
 
     pub fn set_title(&mut self, title: &str) {
-        self.title = title.replace("\n", " ");
+        self.title = title.replace('\n', " ");
     }
 
     pub fn md_file_path(&self) -> String {

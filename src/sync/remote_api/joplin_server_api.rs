@@ -1,11 +1,12 @@
-use reqwest::blocking::{Client, RequestBuilder, Response};
 pub use reqwest::StatusCode;
+use reqwest::{Client, RequestBuilder, Response};
 use reqwest::{Error as ResError, Method};
 use serde::{Deserialize, Serialize};
 
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use thiserror::Error;
 
-use crate::{DateTimeTimestamp, ModelType};
+use crate::{sync::SyncError, DateTimeTimestamp};
 
 #[cfg(test)]
 mod test_env {
@@ -43,6 +44,12 @@ pub enum JoplinServerError {
     ResInnerError(#[from] ResError),
 }
 
+impl From<JoplinServerError> for SyncError {
+    fn from(err: JoplinServerError) -> Self {
+        Self::APIError(format!("{:?}", err))
+    }
+}
+
 #[derive(Debug, Serialize)]
 struct LoginForm<'a> {
     email: &'a str,
@@ -71,14 +78,28 @@ pub struct FileMetadata {
     pub created_time: DateTimeTimestamp,
 }
 
+#[derive(Debug, Deserialize_repr, Serialize_repr, PartialEq, Eq, Clone, Copy)]
+#[repr(u8)]
+pub enum ChangeType {
+    Create = 1,
+    Update = 2,
+    Delete = 3,
+}
+
+impl ChangeType {
+    pub fn is_deleted(self) -> bool {
+        self == ChangeType::Delete
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct DeltaItem {
     pub id: String,
     pub item_id: String,
     pub item_name: String,
-    pub r#type: ModelType,
+    pub r#type: ChangeType,
     pub updated_time: DateTimeTimestamp,
-    pub jop_updated_time: DateTimeTimestamp,
+    pub jop_updated_time: Option<DateTimeTimestamp>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -129,16 +150,17 @@ impl JoplinServerAPI {
             .header("X-API-MIN-VERSION", "2.6.0")
     }
 
-    pub fn login(host: &str, email: &str, password: &str) -> JoplinServerResult<Self> {
+    pub async fn login(host: &str, email: &str, password: &str) -> JoplinServerResult<Self> {
         let login_form = LoginForm { email, password };
         let host = host.to_string();
         let client = Client::new();
         let res = client
             .post(format!("{}/{}", host, "api/sessions"))
             .json(&login_form)
-            .send()?;
-        let res = Self::check_response(res)?;
-        let login_result = res.json::<LoginResult>()?;
+            .send()
+            .await?;
+        let res = Self::check_response(res).await?;
+        let login_result = res.json::<LoginResult>().await?;
         Ok(Self {
             host,
             client,
@@ -146,81 +168,86 @@ impl JoplinServerAPI {
         })
     }
 
-    pub fn put_bytes(&self, path: &str, bytes: Vec<u8>) -> JoplinServerResult<PutResult> {
+    pub async fn put_bytes(&self, path: &str, bytes: Vec<u8>) -> JoplinServerResult<PutResult> {
         let res = self
             .request_builder(Method::PUT, &format!("{}/content", self.with_path(path)))
             .header("Content-Type", "application/octet-stream")
             .body(bytes)
-            .send()?;
-        let res = Self::check_response(res)?;
-        Ok(res.json()?)
+            .send()
+            .await?;
+        let res = Self::check_response(res).await?;
+        Ok(res.json().await?)
     }
 
-    pub fn check_response(res: Response) -> JoplinServerResult<Response> {
+    pub async fn check_response(res: Response) -> JoplinServerResult<Response> {
         let status_code = res.status();
         if status_code.is_success() {
             return Ok(res);
         }
         Err(JoplinServerError::ResError {
-            text: res.text().ok().unwrap_or_default(),
+            text: res.text().await.ok().unwrap_or_default(),
             status_code,
         })
     }
 
-    pub fn put(&self, path: &str, s: String) -> JoplinServerResult<PutResult> {
+    pub async fn put(&self, path: &str, s: String) -> JoplinServerResult<PutResult> {
         let res = self
             .request_builder(Method::PUT, &format!("{}/content", self.with_path(path)))
             .header("Content-Type", "application/octet-stream")
             .body(s)
-            .send()?;
-        let res = Self::check_response(res)?;
-        Ok(res.json()?)
+            .send()
+            .await?;
+        let res = Self::check_response(res).await?;
+        Ok(res.json().await?)
     }
 
-    pub fn delete(&self, path: &str) -> JoplinServerResult<()> {
+    pub async fn delete(&self, path: &str) -> JoplinServerResult<()> {
         let res = self
             .request_builder(Method::DELETE, &self.with_path(path))
-            .send()?;
-        Self::check_response(res)?;
+            .send()
+            .await?;
+        Self::check_response(res).await?;
         Ok(())
     }
 
-    pub fn get(&self, path: &str) -> JoplinServerResult<Vec<u8>> {
+    pub async fn get(&self, path: &str) -> JoplinServerResult<Vec<u8>> {
         let res = self
             .request_builder(Method::GET, &format!("{}/content", self.with_path(path)))
-            .send()?;
-        let res = Self::check_response(res)?;
-        Ok(res.bytes()?.to_vec())
+            .send()
+            .await?;
+        let res = Self::check_response(res).await?;
+        Ok(res.bytes().await?.to_vec())
     }
 
-    pub fn metadata(&self, path: &str) -> JoplinServerResult<FileMetadata> {
+    pub async fn metadata(&self, path: &str) -> JoplinServerResult<FileMetadata> {
         let res = self
             .request_builder(Method::GET, &self.with_path(path))
-            .send()?;
-        let res = Self::check_response(res)?;
-        Ok(res.json()?)
+            .send()
+            .await?;
+        let res = Self::check_response(res).await?;
+        Ok(res.json().await?)
     }
 
-    pub fn root_delta(&self, cursor: Option<&str>) -> JoplinServerResult<DeltaResult> {
-        self.delta("", cursor)
+    pub async fn root_delta(&self, cursor: Option<&str>) -> JoplinServerResult<DeltaResult> {
+        self.delta("", cursor).await
     }
 
-    pub fn delta(&self, path: &str, cursor: Option<&str>) -> JoplinServerResult<DeltaResult> {
+    pub async fn delta(&self, path: &str, cursor: Option<&str>) -> JoplinServerResult<DeltaResult> {
         let mut builder =
             self.request_builder(Method::GET, &format!("{}/delta", self.with_path(path)));
         if let Some(cursor) = cursor {
             builder = builder.query(&[("cursor", cursor)]);
         }
-        let res = builder.send()?;
-        let res = Self::check_response(res)?;
-        Ok(res.json()?)
+        let res = builder.send().await?;
+        let res = Self::check_response(res).await?;
+        Ok(res.json().await?)
     }
 
-    pub fn root_list(&self, cursor: Option<&str>) -> JoplinServerResult<ListResult> {
-        self.list("", cursor)
+    pub async fn root_list(&self, cursor: Option<&str>) -> JoplinServerResult<ListResult> {
+        self.list("", cursor).await
     }
 
-    pub fn list(&self, path: &str, cursor: Option<&str>) -> JoplinServerResult<ListResult> {
+    pub async fn list(&self, path: &str, cursor: Option<&str>) -> JoplinServerResult<ListResult> {
         let path = if path.is_empty() {
             path.to_string()
         } else {
@@ -231,9 +258,9 @@ impl JoplinServerAPI {
         if let Some(cursor) = cursor {
             builder = builder.query(&[("cursor", cursor)]);
         }
-        let res = builder.send()?;
-        let res = Self::check_response(res)?;
-        Ok(res.json()?)
+        let res = builder.send().await?;
+        let res = Self::check_response(res).await?;
+        Ok(res.json().await?)
     }
 }
 
@@ -243,27 +270,28 @@ mod tests {
 
     use super::{test_env, JoplinServerAPI, JoplinServerResult};
 
-    #[test]
-    fn test_login() -> JoplinServerResult<()> {
+    #[tokio::test]
+    async fn test_login() -> JoplinServerResult<()> {
         let test_config = test_env::read_test_env().joplin_server;
         let api =
-            JoplinServerAPI::login(&test_config.host, &test_config.email, &test_config.password)?;
+            JoplinServerAPI::login(&test_config.host, &test_config.email, &test_config.password)
+                .await?;
         assert!(!api.session_id.is_empty());
         println!("session id: {}", api.session_id);
         Ok(())
     }
 
-    #[test]
-    fn test_simple() -> JoplinServerResult<()> {
+    #[tokio::test]
+    async fn test_simple() -> JoplinServerResult<()> {
         let test_config = test_env::read_test_env().joplin_server;
         let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
         let path = "testing.bin";
-        let create_result = api.put_bytes(path, b"testing1".to_vec())?;
-        let create_metadata = api.metadata(path)?;
-        assert_eq!(b"testing1".to_vec(), api.get(path)?);
-        let update_result = api.put_bytes(path, b"testing2".to_vec())?;
-        assert_eq!(b"testing2".to_vec(), api.get(path)?);
-        let update_metadata = api.metadata(path)?;
+        let create_result = api.put_bytes(path, b"testing1".to_vec()).await?;
+        let create_metadata = api.metadata(path).await?;
+        assert_eq!(b"testing1".to_vec(), api.get(path).await?);
+        let update_result = api.put_bytes(path, b"testing2".to_vec()).await?;
+        assert_eq!(b"testing2".to_vec(), api.get(path).await?);
+        let update_metadata = api.metadata(path).await?;
         assert!(update_result.created_time.is_none());
         assert_eq!(create_result.id, update_result.id);
         assert_eq!(create_result.name, update_result.name);
@@ -271,12 +299,12 @@ mod tests {
         assert_eq!(create_metadata.name, update_metadata.name);
         assert_eq!(create_metadata.created_time, update_metadata.created_time);
         assert!(create_metadata.updated_time < update_metadata.updated_time);
-        api.delete(path)?;
+        api.delete(path).await?;
         Ok(())
     }
 
-    #[test]
-    fn test_delta() -> JoplinServerResult<()> {
+    #[tokio::test]
+    async fn test_delta() -> JoplinServerResult<()> {
         // let test_config = test_env::read_test_env().joplin_server;
         // let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
         // let folder_1 = Folder::new("TestFolder1".to_string(), None);
@@ -294,21 +322,21 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_list() -> JoplinServerResult<()> {
+    #[tokio::test]
+    async fn test_list() -> JoplinServerResult<()> {
         let test_config = test_env::read_test_env().joplin_server;
         let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
         let path = "test/test-list.md";
-        api.put_bytes(path, b"testing1".to_vec())?;
-        let list = api.root_list(None)?;
+        api.put_bytes(path, b"testing1".to_vec()).await?;
+        let list = api.root_list(None).await?;
         assert!(!list.items.is_empty());
-        let list = api.list("test", None)?;
+        let list = api.list("test", None).await?;
         assert!(!list.items.is_empty());
         Ok(())
     }
 
-    #[test]
-    fn test_create_note() -> JoplinServerResult<()> {
+    #[tokio::test]
+    async fn test_create_note() -> JoplinServerResult<()> {
         let test_config = test_env::read_test_env().joplin_server;
         let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
         let test_folder = Folder::new("TestFolder".to_string(), None);
@@ -316,7 +344,8 @@ mod tests {
         api.put(
             &test_folder_path,
             test_folder.serialize().unwrap().into_string(),
-        )?;
+        )
+        .await?;
         let test_note = Note::new(
             Some(test_folder.id),
             "TestNote".to_string(),
@@ -326,9 +355,10 @@ mod tests {
         api.put(
             &test_note_path,
             test_note.serialize().unwrap().into_string(),
-        )?;
-        api.delete(&test_folder_path)?;
-        api.delete(&test_note_path)?;
+        )
+        .await?;
+        api.delete(&test_folder_path).await?;
+        api.delete(&test_note_path).await?;
         Ok(())
     }
 }

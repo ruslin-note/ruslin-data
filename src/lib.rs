@@ -1,4 +1,4 @@
-mod database;
+pub mod database;
 mod models;
 mod schema;
 pub mod sync;
