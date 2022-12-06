@@ -125,8 +125,9 @@ impl FileApiDriver for FileApiDriverJoplinServer {
         todo!()
     }
 
-    async fn delete(&self, _path: &str) -> SyncResult<()> {
-        todo!()
+    async fn delete(&self, path: &str) -> SyncResult<()> {
+        self.api.delete(path).await?;
+        Ok(())
     }
 
     async fn r#move(&self, _old_path: &str, _new_path: &str) -> SyncResult<()> {

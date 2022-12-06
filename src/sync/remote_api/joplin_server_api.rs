@@ -264,6 +264,8 @@ impl JoplinServerAPI {
 
 #[cfg(debug_assertions)]
 pub mod test_api {
+    use crate::sync::SyncConfig;
+
     use super::JoplinServerAPI;
 
     #[derive(Debug, Clone, Copy)]
@@ -283,6 +285,15 @@ pub mod test_api {
             JoplinServerAPI::login(host, &email, password)
                 .await
                 .unwrap()
+        }
+
+        pub fn sync_config(&self) -> SyncConfig {
+            let user_num = *self as i32;
+            SyncConfig::JoplinServer {
+                host: "http://localhost:22300".to_string(),
+                email: format!("user{user_num}@example.com"),
+                password: "111111".to_string(),
+            }
         }
     }
 }
