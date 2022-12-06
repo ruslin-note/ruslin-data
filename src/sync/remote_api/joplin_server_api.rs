@@ -266,35 +266,43 @@ impl JoplinServerAPI {
 pub mod test_api {
     use super::JoplinServerAPI;
 
-    pub async fn api_login(user_num: i32) -> JoplinServerAPI {
-        let host = "http://localhost:22300";
-        let email = format!("user{user_num}@example.com");
-        let password = "111111";
-        JoplinServerAPI::login(host, &email, password)
-            .await
-            .unwrap()
+    #[derive(Debug, Clone, Copy)]
+    #[repr(i32)]
+    pub enum TestSyncClient {
+        Default = 1,
+        Basic1,
+        Basic2,
+    }
+
+    impl TestSyncClient {
+        pub async fn login(&self) -> JoplinServerAPI {
+            let host = "http://localhost:22300";
+            let user_num = *self as i32;
+            let email = format!("user{user_num}@example.com");
+            let password = "111111";
+            JoplinServerAPI::login(host, &email, password)
+                .await
+                .unwrap()
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        sync::{remote_api::joplin_server_api::test_api, SerializeForSync},
-        Folder, Note,
-    };
+    use crate::{sync::SerializeForSync, Folder, Note};
 
-    use super::JoplinServerResult;
+    use super::{test_api::TestSyncClient, JoplinServerResult};
 
     #[tokio::test]
     async fn test_clear_root() -> JoplinServerResult<()> {
-        let api = test_api::api_login(1).await;
+        let api = TestSyncClient::Default.login().await;
         api.clear_root().await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_login() -> JoplinServerResult<()> {
-        let api = test_api::api_login(1).await;
+        let api = TestSyncClient::Default.login().await;
         assert!(!api.session_id.is_empty());
         println!("session id: {}", api.session_id);
         Ok(())
@@ -302,7 +310,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_simple() -> JoplinServerResult<()> {
-        let api = test_api::api_login(1).await;
+        let api = TestSyncClient::Default.login().await;
         let path = "testing.bin";
         let create_result = api.put_bytes(path, b"testing1".to_vec()).await?;
         let create_metadata = api.metadata(path).await?.unwrap();
@@ -342,7 +350,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_list() -> JoplinServerResult<()> {
-        let api = test_api::api_login(1).await;
+        let api = TestSyncClient::Default.login().await;
         let path = "test/test-list.md";
         api.put_bytes(path, b"testing1".to_vec()).await?;
         let list = api.root_list(None).await?;
@@ -354,7 +362,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_note() -> JoplinServerResult<()> {
-        let api = test_api::api_login(1).await;
+        let api = TestSyncClient::Default.login().await;
         let test_folder = Folder::new("TestFolder".to_string(), None);
         let test_folder_path = test_folder.md_file_path();
         api.put(&test_folder_path, test_folder.serialize().into_string())
