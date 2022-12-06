@@ -8,29 +8,6 @@ use thiserror::Error;
 
 use crate::{sync::SyncError, DateTimeTimestamp};
 
-#[cfg(test)]
-mod test_env {
-    use serde::Deserialize;
-
-    #[derive(Deserialize)]
-    pub struct TestEnv {
-        pub joplin_server: TestJoplinServerEnv,
-    }
-
-    #[derive(Deserialize)]
-    pub struct TestJoplinServerEnv {
-        pub host: String,
-        pub session_id: String,
-        pub email: String,
-        pub password: String,
-    }
-
-    pub fn read_test_env() -> TestEnv {
-        let env_toml = include_str!("../../../.test-env.toml");
-        toml::from_str(env_toml).unwrap()
-    }
-}
-
 pub type JoplinServerResult<T> = Result<T, JoplinServerError>;
 
 #[derive(Error, Debug)]
@@ -285,26 +262,39 @@ impl JoplinServerAPI {
     }
 }
 
+#[cfg(debug_assertions)]
+pub mod test_api {
+    use super::JoplinServerAPI;
+
+    pub async fn api_login(user_num: i32) -> JoplinServerAPI {
+        let host = "http://localhost:22300";
+        let email = format!("user{user_num}@example.com");
+        let password = "111111";
+        JoplinServerAPI::login(host, &email, password)
+            .await
+            .unwrap()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{sync::SerializeForSync, Folder, Note};
+    use crate::{
+        sync::{remote_api::joplin_server_api::test_api, SerializeForSync},
+        Folder, Note,
+    };
 
-    use super::{test_env, JoplinServerAPI, JoplinServerResult};
+    use super::JoplinServerResult;
 
     #[tokio::test]
     async fn test_clear_root() -> JoplinServerResult<()> {
-        let test_config = test_env::read_test_env().joplin_server;
-        let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
+        let api = test_api::api_login(1).await;
         api.clear_root().await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_login() -> JoplinServerResult<()> {
-        let test_config = test_env::read_test_env().joplin_server;
-        let api =
-            JoplinServerAPI::login(&test_config.host, &test_config.email, &test_config.password)
-                .await?;
+        let api = test_api::api_login(1).await;
         assert!(!api.session_id.is_empty());
         println!("session id: {}", api.session_id);
         Ok(())
@@ -312,8 +302,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_simple() -> JoplinServerResult<()> {
-        let test_config = test_env::read_test_env().joplin_server;
-        let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
+        let api = test_api::api_login(1).await;
         let path = "testing.bin";
         let create_result = api.put_bytes(path, b"testing1".to_vec()).await?;
         let create_metadata = api.metadata(path).await?.unwrap();
@@ -353,8 +342,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_list() -> JoplinServerResult<()> {
-        let test_config = test_env::read_test_env().joplin_server;
-        let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
+        let api = test_api::api_login(1).await;
         let path = "test/test-list.md";
         api.put_bytes(path, b"testing1".to_vec()).await?;
         let list = api.root_list(None).await?;
@@ -366,8 +354,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_note() -> JoplinServerResult<()> {
-        let test_config = test_env::read_test_env().joplin_server;
-        let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
+        let api = test_api::api_login(1).await;
         let test_folder = Folder::new("TestFolder".to_string(), None);
         let test_folder_path = test_folder.md_file_path();
         api.put(&test_folder_path, test_folder.serialize().into_string())

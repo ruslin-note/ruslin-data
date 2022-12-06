@@ -3,4 +3,3 @@
 *.sqlite
 *.sqlite-*
 *.kate-swp
-/.test-env.toml
