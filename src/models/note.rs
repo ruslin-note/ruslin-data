@@ -25,7 +25,7 @@ pub struct AbbrNote {
 pub struct Note {
     pub id: String,
     pub parent_id: Option<String>,
-    title: String,
+    pub title: String,
     pub body: String,
     pub created_time: DateTimeTimestamp,
     pub updated_time: DateTimeTimestamp,
