@@ -144,12 +144,14 @@ impl Database {
             notes::created_time,
             notes::updated_time,
         );
+        let query_stmt = notes::table
+            .select(selection)
+            .order(notes::updated_time.desc());
         Ok(match parent_id {
-            Some(parent_id) => notes::table
+            Some(parent_id) => query_stmt
                 .filter(notes::parent_id.eq(parent_id))
-                .select(selection)
                 .load(&mut conn),
-            None => notes::table.select(selection).load(&mut conn),
+            None => query_stmt.load(&mut conn),
         }?)
     }
 

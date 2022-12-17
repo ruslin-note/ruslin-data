@@ -1,8 +1,8 @@
-use std::ops::Deref;
+use std::{ops::Deref, time::Duration};
 
 use tempfile::TempDir;
 
-use ruslin_data::{Database, DatabaseResult, Folder, UpdateSource};
+use ruslin_data::{Database, DatabaseResult, Folder, Note, UpdateSource};
 
 pub struct TestDatabase(pub Database, TempDir);
 
@@ -47,6 +47,15 @@ fn test_folder() -> DatabaseResult<()> {
 }
 
 #[test]
-fn test_note() -> DatabaseResult<()> {
+fn test_load_abbr_notes_order() -> DatabaseResult<()> {
+    let db = TestDatabase::temp();
+    let note_1 = Note::new(None, "title_1".to_string(), "".to_string());
+    db.replace_note(&note_1, UpdateSource::LocalEdit)?;
+    std::thread::sleep(Duration::from_millis(200));
+    let note_2 = Note::new(None, "title_2".to_string(), "".to_string());
+    db.replace_note(&note_2, UpdateSource::LocalEdit)?;
+    let notes = db.load_abbr_notes(None)?;
+    assert_eq!(note_2.title, notes[0].title);
+    assert_eq!(note_1.title, notes[1].title);
     Ok(())
 }
