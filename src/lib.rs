@@ -65,7 +65,7 @@ impl RuslinData {
         };
         self.db.replace_setting(
             Setting::FILE_API_SYNC_CONFIG,
-            &serde_json::to_string(&sync_config).unwrap(),
+            &serde_json::to_string(&sync_config).expect("sync_config to_string error"),
         )?;
         self.sync_config.write().replace(sync_config);
         Ok(())

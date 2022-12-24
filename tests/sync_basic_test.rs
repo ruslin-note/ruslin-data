@@ -5,13 +5,15 @@ mod database_test;
 
 #[tokio::test]
 async fn test_basic() -> SyncResult<()> {
-    let data_dir_1 = tempfile::TempDir::new().unwrap();
+    let data_dir_1 =
+        tempfile::TempDir::new().expect(&format!("unwrap error in {}:{}", file!(), line!()));
     let client_1 = RuslinData::new(data_dir_1.path())?;
     client_1
         .save_sync_config(TestSyncClient::Basic1.sync_config())
         .await?;
 
-    let data_dir_2 = tempfile::TempDir::new().unwrap();
+    let data_dir_2 =
+        tempfile::TempDir::new().expect(&format!("unwrap error in {}:{}", file!(), line!()));
     let client_2 = RuslinData::new(data_dir_2.path())?;
     client_2
         .save_sync_config(TestSyncClient::Basic2.sync_config())

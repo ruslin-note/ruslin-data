@@ -202,6 +202,9 @@ impl Synchronizer {
                                 &local_sync_item.item_id,
                                 UpdateSource::RemoteSync,
                             )?,
+                            ModelType::Unsupported => {
+                                log::warn!("skip unsupported type {}", local_sync_item.item_id);
+                            }
                         }
                     }
                 } else {
@@ -231,6 +234,9 @@ impl Synchronizer {
                                 folder.get_title()
                             );
                             self.db.replace_folder(&folder, UpdateSource::RemoteSync)?;
+                        }
+                        ModelType::Unsupported => {
+                            log::warn!("skip unsupported type {content}");
                         }
                     }
                 }

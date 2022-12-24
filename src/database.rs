@@ -51,7 +51,10 @@ impl Database {
     pub fn new_with_filename(data_dir: &Path, filename: &str) -> DatabaseResult<Database> {
         fs::create_dir_all(data_dir)?;
         let database_url = data_dir.join(filename);
-        let database_url = database_url.to_str().unwrap().to_string();
+        let database_url = database_url
+            .to_str()
+            .expect("database url error")
+            .to_string();
         let manager = ConnectionManager::<SqliteConnection>::new(database_url);
         let connection_pool = Pool::builder()
             .connection_customizer(Box::new(ConnectionOptions::default()))
@@ -329,6 +332,9 @@ impl Database {
             ModelType::Folder => self
                 .load_folder(&sync_item.item_id)
                 .map(|folder| folder.serialize()),
+            ModelType::Unsupported => {
+                panic!("cannot load unsupported type");
+            }
         }
     }
 

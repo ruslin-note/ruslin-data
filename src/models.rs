@@ -52,6 +52,7 @@ pub enum ModelType {
     // Migration = 14,
     // SmartFilter = 15,
     // Command = 16,
+    Unsupported = -1,
 }
 
 impl From<i32> for ModelType {
@@ -59,7 +60,7 @@ impl From<i32> for ModelType {
         match val {
             1 => ModelType::Note,
             2 => ModelType::Folder,
-            _ => panic!("Unrecognized variant {}", val),
+            _ => ModelType::Unsupported,
         }
     }
 }

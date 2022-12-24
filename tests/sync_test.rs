@@ -22,5 +22,8 @@ async fn test_delta() {
     let api = TestSyncClient::Default.login().await;
     let file_api_driver = FileApiDriverJoplinServer::new(api);
     let synchronizer = Synchronizer::new(Arc::new(db.0), Box::new(file_api_driver));
-    synchronizer.start().await.unwrap();
+    synchronizer
+        .start()
+        .await
+        .expect(&format!("unwrap error in {}:{}", file!(), line!()));
 }

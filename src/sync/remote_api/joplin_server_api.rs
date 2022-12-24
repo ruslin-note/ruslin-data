@@ -284,7 +284,7 @@ pub mod test_api {
             let password = "111111";
             JoplinServerAPI::login(host, &email, password)
                 .await
-                .unwrap()
+                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
         }
 
         pub fn sync_config(&self) -> SyncConfig {
@@ -324,11 +324,17 @@ mod tests {
         let api = TestSyncClient::Default.login().await;
         let path = "testing.bin";
         let create_result = api.put_bytes(path, b"testing1".to_vec()).await?;
-        let create_metadata = api.metadata(path).await?.unwrap();
+        let create_metadata =
+            api.metadata(path)
+                .await?
+                .expect(&format!("unwrap error in {}:{}", file!(), line!()));
         assert_eq!(b"testing1".to_vec(), api.get(path).await?);
         let update_result = api.put_bytes(path, b"testing2".to_vec()).await?;
         assert_eq!(b"testing2".to_vec(), api.get(path).await?);
-        let update_metadata = api.metadata(path).await?.unwrap();
+        let update_metadata =
+            api.metadata(path)
+                .await?
+                .expect(&format!("unwrap error in {}:{}", file!(), line!()));
         assert!(update_result.created_time.is_none());
         assert_eq!(create_result.id, update_result.id);
         assert_eq!(create_result.name, update_result.name);
@@ -346,11 +352,11 @@ mod tests {
         // let api = JoplinServerAPI::new(&test_config.host, &test_config.session_id);
         // let folder_1 = Folder::new("TestFolder1".to_string(), None);
         // let path_1 = format!("{}.md", folder_1.id.as_str());
-        // let put_result_1 = api.put(&path_1, folder_1.serialize().unwrap().into_string())?;
+        // let put_result_1 = api.put(&path_1, folder_1.serialize().expect(&format!("unwrap error in {}:{}", file!(), line!())).into_string())?;
         // println!("put_result_1 {:?}", put_result_1);
         // let folder_2 = Folder::new("TestFolder2".to_string(), None);
         // let path_2 = format!("{}.md", folder_2.id.as_str());
-        // let put_result_2 = api.put(&path_2, folder_2.serialize().unwrap().into_string())?;
+        // let put_result_2 = api.put(&path_2, folder_2.serialize().expect(&format!("unwrap error in {}:{}", file!(), line!())).into_string())?;
         // let delta_result = api.root_delta(Some(&put_result_1.id))?;
         // assert_eq!(1, delta_result.items.len());
         // assert_eq!(put_result_2.id, delta_result.items[0].id);

@@ -38,12 +38,12 @@ impl<D: FileApiDriver> FileApi<D> {
         self.driver.mkdir(&path).await
     }
 
-    pub async fn stat(&self, path: &str) -> SyncResult<Stat> {
+    pub async fn stat(&self, path: &str) -> SyncResult<Option<Stat>> {
         let mut stat = self.driver.stat(&self.full_path(path)).await?;
         if let Some(stat) = &mut stat {
             stat.path = path.to_string();
         }
-        Ok(stat.unwrap())
+        Ok(stat)
     }
 
     pub async fn list(&self, path: &str) -> SyncResult<StatList> {
@@ -52,7 +52,11 @@ impl<D: FileApiDriver> FileApi<D> {
 
     pub async fn clear_root(&self) -> SyncResult<()> {
         self.driver
-            .clear_root(self.base_dir.to_str().unwrap())
+            .clear_root(self.base_dir.to_str().expect(&format!(
+                "unwrap error in {}:{}",
+                file!(),
+                line!()
+            )))
             .await
     }
 
@@ -61,6 +65,10 @@ impl<D: FileApiDriver> FileApi<D> {
     }
 
     fn full_path(&self, path: &str) -> String {
-        self.base_dir.join(path).to_str().unwrap().to_string()
+        self.base_dir
+            .join(path)
+            .to_str()
+            .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+            .to_string()
     }
 }

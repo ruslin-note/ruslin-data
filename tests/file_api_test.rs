@@ -10,10 +10,18 @@ pub struct TestFileApiDriverLocal(FileApi<FileApiDriverLocal>, TempDir);
 
 impl TestFileApiDriverLocal {
     pub async fn temp() -> Self {
-        let temp_dir = tempfile::TempDir::new().unwrap();
-        let base_dir = temp_dir.path().to_str().unwrap();
+        let temp_dir =
+            tempfile::TempDir::new().expect(&format!("unwrap error in {}:{}", file!(), line!()));
+        let base_dir =
+            temp_dir
+                .path()
+                .to_str()
+                .expect(&format!("unwrap error in {}:{}", file!(), line!()));
         let file_api = FileApi::new(base_dir, FileApiDriverLocal::new());
-        file_api.clear_root().await.unwrap();
+        file_api
+            .clear_root()
+            .await
+            .expect(&format!("unwrap error in {}:{}", file!(), line!()));
         TestFileApiDriverLocal(file_api, temp_dir)
     }
 }

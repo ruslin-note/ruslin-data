@@ -44,7 +44,7 @@ impl DateTimeTimestamp {
     }
 
     pub fn format_ymd_hms(&self) -> String {
-        let utc = NaiveDateTime::from_timestamp_millis(self.0).unwrap();
+        let utc = NaiveDateTime::from_timestamp_millis(self.0).expect("format_ymd_hms error");
         chrono::Local
             .from_utc_datetime(&utc)
             .format("%Y-%m-%d %H:%M:%S")
@@ -81,7 +81,7 @@ impl DateTimeRFC333 {
     }
 
     pub fn from_timestamp_millis(t: i64) -> Self {
-        let t = NaiveDateTime::from_timestamp_millis(t).unwrap();
+        let t = NaiveDateTime::from_timestamp_millis(t).expect("from_timestamp_millis error");
         let time = chrono::DateTime::<Utc>::from_utc(t, Utc);
         Self(time)
     }
@@ -95,7 +95,7 @@ impl DateTimeRFC333 {
     }
 
     pub fn from_raw_str(s: &str) -> Self {
-        let dt = chrono::DateTime::parse_from_rfc3339(s).unwrap();
+        let dt = chrono::DateTime::parse_from_rfc3339(s).expect("parse_from_rfc3339 error");
         let dt = dt.with_timezone(&Utc);
         Self(dt)
     }
@@ -123,7 +123,7 @@ impl<'de> Deserialize<'de> for DateTimeRFC333 {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let dt = chrono::DateTime::parse_from_rfc3339(&s).unwrap();
+        let dt = chrono::DateTime::parse_from_rfc3339(&s).expect("parse_from_rfc3339 error");
         let dt = dt.with_timezone(&Utc);
         Ok(DateTimeRFC333(dt))
     }
@@ -136,13 +136,15 @@ mod tests {
     #[test]
     fn test_date_time_serialize() {
         let dt = DateTimeRFC333::from_timestamp_millis(1668922083344);
-        let serialized_str = serde_json::to_string(&dt).unwrap();
+        let serialized_str =
+            serde_json::to_string(&dt).expect(&format!("unwrap error in {}:{}", file!(), line!()));
         assert_eq!(r#""2022-11-20T05:28:03.344Z""#, serialized_str);
     }
 
     #[test]
     fn test_date_time_deserialize() {
-        let dt: DateTimeRFC333 = serde_json::from_str(r#""2022-11-20T05:28:03.344Z""#).unwrap();
+        let dt: DateTimeRFC333 = serde_json::from_str(r#""2022-11-20T05:28:03.344Z""#)
+            .expect(&format!("unwrap error in {}:{}", file!(), line!()));
         assert_eq!(1668922083344, dt.timestamp_millis());
     }
 

@@ -29,7 +29,7 @@ impl FromStr for ForSyncDeserializer {
                 break;
             }
         }
-        let title = String::from(iter.next().unwrap());
+        let title = iter.next().map(|i| i.to_string()).unwrap_or_default(); // String::from(iter.next().expect(&format!("ForSyncDeserializer iter next error\n {s}")));
         iter.next();
         let body: Option<String> = if let Some(s) = iter.next() {
             let mut string = String::from(s);
@@ -41,7 +41,11 @@ impl FromStr for ForSyncDeserializer {
         } else {
             None
         };
-        let r#type: i32 = kvs.get("type_").unwrap().parse().unwrap();
+        let r#type: i32 = kvs
+            .get("type_")
+            .expect("get type_ error")
+            .parse()
+            .expect("type_ parse error");
         Ok(Self {
             title,
             body,
@@ -144,15 +148,26 @@ share_id:
 master_key_id: 
 icon: 
 type_: 2"#;
-        let des = ForSyncDeserializer::from_str(s).unwrap();
+        let des = ForSyncDeserializer::from_str(s).expect(&format!(
+            "unwrap error in {}:{}",
+            file!(),
+            line!()
+        ));
         assert_eq!("Folder1", des.title);
         assert!(des.body.is_none());
         assert_eq!(
             "fd7d741357e2451283166354c512df3b",
-            des.kvs.get("id").unwrap()
+            des.kvs
+                .get("id")
+                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
         );
         assert!(des.kvs.get("encryption_cipher_text").is_none());
-        assert_eq!("2", des.kvs.get("type_").unwrap());
+        assert_eq!(
+            "2",
+            des.kvs
+                .get("type_")
+                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+        );
     }
 
     #[test]
@@ -190,13 +205,23 @@ share_id:
 conflict_original_id: 
 master_key_id: 
 type_: 1"#;
-        let des = ForSyncDeserializer::from_str(s).unwrap();
+        let des = ForSyncDeserializer::from_str(s).expect(&format!(
+            "unwrap error in {}:{}",
+            file!(),
+            line!()
+        ));
         assert_eq!("Note1", des.title);
         assert!(des.body.is_some());
         assert_eq!(
             "Content1\n\nid: a8e8dae6e666492c90d293c914452b94",
-            des.body.unwrap()
+            des.body
+                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
         );
-        assert_eq!("1", des.kvs.get("type_").unwrap());
+        assert_eq!(
+            "1",
+            des.kvs
+                .get("type_")
+                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+        );
     }
 }

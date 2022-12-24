@@ -34,7 +34,7 @@ impl TryFrom<Metadata> for Stat {
                 metadata
                     .modified()?
                     .duration_since(UNIX_EPOCH)
-                    .unwrap()
+                    .expect(&format!("unwrap error in {}:{}", file!(), line!()))
                     .as_micros() as i64,
             ),
             is_dir: metadata.is_dir(),
@@ -66,9 +66,9 @@ impl RemoteItem {
         self.path
             .split('/')
             .last()
-            .unwrap()
+            .expect(&format!("unwrap error in {}:{}", file!(), line!()))
             .split_once('.')
-            .unwrap()
+            .expect(&format!("unwrap error in {}:{}", file!(), line!()))
             .0
     }
 }

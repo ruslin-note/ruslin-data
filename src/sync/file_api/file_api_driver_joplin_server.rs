@@ -22,7 +22,7 @@ impl SyncContext for JoplinServerSyncContext {
     }
 
     fn to_string(&self) -> String {
-        serde_json::to_string(self).unwrap()
+        serde_json::to_string(self).expect(&format!("unwrap error in {}:{}", file!(), line!()))
     }
 }
 

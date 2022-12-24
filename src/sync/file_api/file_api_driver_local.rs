@@ -49,7 +49,11 @@ impl FileApiDriver for FileApiDriverLocal {
         for entry in fs::read_dir(path)? {
             let entry = entry?;
             let mut stat: Stat = entry.metadata()?.try_into()?;
-            stat.path = entry.file_name().to_str().unwrap().to_string();
+            stat.path = entry
+                .file_name()
+                .to_str()
+                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+                .to_string();
             stats.push(stat);
         }
         Ok(StatList {

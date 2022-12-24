@@ -212,8 +212,13 @@ master_key_id:
 icon: 
 type_: 2";
         assert_eq!(expected_str, serialize_result);
-        let des = ForSyncDeserializer::from_str(expected_str).unwrap();
-        let des_folder = Folder::dserialize(&des).unwrap();
+        let des = ForSyncDeserializer::from_str(expected_str).expect(&format!(
+            "unwrap error in {}:{}",
+            file!(),
+            line!()
+        ));
+        let des_folder =
+            Folder::dserialize(&des).expect(&format!("unwrap error in {}:{}", file!(), line!()));
         assert_eq!(folder, des_folder);
     }
 }
