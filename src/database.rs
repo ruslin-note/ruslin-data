@@ -176,7 +176,7 @@ impl Database {
             .load(&mut conn)?)
     }
 
-    pub fn conflict_notes_exist(&self) -> DatabaseResult<bool> {
+    pub fn conflict_note_exists(&self) -> DatabaseResult<bool> {
         let mut conn = self.connection_pool.get()?;
         use crate::schema::notes;
         Ok(

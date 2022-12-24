@@ -124,7 +124,7 @@ async fn test_should_not_sync_deletions_that_came_via_sync_even_when_there_is_a_
     client_1.sync().await?;
     let abbr_notes = client_1.db.load_abbr_notes(None)?;
     assert!(!abbr_notes.iter().any(|n| n.id == note.id));
-    assert!(client_1.db.conflict_notes_exist()?);
+    assert!(client_1.db.conflict_note_exists()?);
     let abbr_conflict_notes = client_1.db.load_abbr_conflict_notes()?;
     assert_eq!(1, abbr_conflict_notes.len());
     assert!(client_1.db.load_note(&note.id).is_err());
