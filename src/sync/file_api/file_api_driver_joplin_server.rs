@@ -22,7 +22,8 @@ impl SyncContext for JoplinServerSyncContext {
     }
 
     fn to_string(&self) -> String {
-        serde_json::to_string(self).expect(&format!("unwrap error in {}:{}", file!(), line!()))
+        serde_json::to_string(self)
+            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()))
     }
 }
 
@@ -135,7 +136,7 @@ impl FileApiDriver for FileApiDriverJoplinServer {
     }
 
     async fn clear_root(&self, _base_dir: &str) -> SyncResult<()> {
-        todo!()
+        Ok(self.api.clear_root().await?)
     }
 
     async fn check_config(&self) -> SyncResult<()> {

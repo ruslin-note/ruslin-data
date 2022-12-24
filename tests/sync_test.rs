@@ -25,5 +25,5 @@ async fn test_delta() {
     synchronizer
         .start()
         .await
-        .expect(&format!("unwrap error in {}:{}", file!(), line!()));
+        .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
 }

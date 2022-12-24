@@ -4,11 +4,13 @@ use crate::{DateTimeRFC333, DateTimeTimestamp, ModelType};
 
 use super::{SyncError, SyncResult};
 
+#[derive(Debug)]
 pub struct ForSyncDeserializer {
     pub title: String,
     pub body: Option<String>,
     pub kvs: HashMap<String, String>,
     pub r#type: ModelType,
+    pub id: String,
 }
 
 impl FromStr for ForSyncDeserializer {
@@ -46,11 +48,13 @@ impl FromStr for ForSyncDeserializer {
             .expect("get type_ error")
             .parse()
             .expect("type_ parse error");
+        let id: String = kvs.get("id").expect("get id error").to_string();
         Ok(Self {
             title,
             body,
             kvs,
             r#type: ModelType::from(r#type),
+            id,
         })
     }
 }
@@ -148,25 +152,24 @@ share_id:
 master_key_id: 
 icon: 
 type_: 2"#;
-        let des = ForSyncDeserializer::from_str(s).expect(&format!(
-            "unwrap error in {}:{}",
-            file!(),
-            line!()
-        ));
+        let des = ForSyncDeserializer::from_str(s)
+            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
         assert_eq!("Folder1", des.title);
         assert!(des.body.is_none());
         assert_eq!(
             "fd7d741357e2451283166354c512df3b",
             des.kvs
                 .get("id")
-                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+                .unwrap_or_else(|| panic!("unwrap error in {}:{}", file!(), line!()))
         );
         assert!(des.kvs.get("encryption_cipher_text").is_none());
         assert_eq!(
             "2",
-            des.kvs
-                .get("type_")
-                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+            des.kvs.get("type_").unwrap_or_else(|| panic!(
+                "unwrap error in {}:{}",
+                file!(),
+                line!()
+            ))
         );
     }
 
@@ -205,23 +208,22 @@ share_id:
 conflict_original_id: 
 master_key_id: 
 type_: 1"#;
-        let des = ForSyncDeserializer::from_str(s).expect(&format!(
-            "unwrap error in {}:{}",
-            file!(),
-            line!()
-        ));
+        let des = ForSyncDeserializer::from_str(s)
+            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
         assert_eq!("Note1", des.title);
         assert!(des.body.is_some());
         assert_eq!(
             "Content1\n\nid: a8e8dae6e666492c90d293c914452b94",
             des.body
-                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+                .unwrap_or_else(|| panic!("unwrap error in {}:{}", file!(), line!()))
         );
         assert_eq!(
             "1",
-            des.kvs
-                .get("type_")
-                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+            des.kvs.get("type_").unwrap_or_else(|| panic!(
+                "unwrap error in {}:{}",
+                file!(),
+                line!()
+            ))
         );
     }
 }

@@ -52,11 +52,11 @@ impl<D: FileApiDriver> FileApi<D> {
 
     pub async fn clear_root(&self) -> SyncResult<()> {
         self.driver
-            .clear_root(self.base_dir.to_str().expect(&format!(
-                "unwrap error in {}:{}",
-                file!(),
-                line!()
-            )))
+            .clear_root(
+                self.base_dir
+                    .to_str()
+                    .unwrap_or_else(|| panic!("unwrap error in {}:{}", file!(), line!())),
+            )
             .await
     }
 
@@ -68,7 +68,7 @@ impl<D: FileApiDriver> FileApi<D> {
         self.base_dir
             .join(path)
             .to_str()
-            .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+            .unwrap_or_else(|| panic!("unwrap error in {}:{}", file!(), line!()))
             .to_string()
     }
 }

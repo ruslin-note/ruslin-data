@@ -274,6 +274,7 @@ pub mod test_api {
         Default = 1,
         Basic1,
         Basic2,
+        Conflict1,
     }
 
     impl TestSyncClient {
@@ -284,7 +285,7 @@ pub mod test_api {
             let password = "111111";
             JoplinServerAPI::login(host, &email, password)
                 .await
-                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+                .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()))
         }
 
         pub fn sync_config(&self) -> SyncConfig {
@@ -324,17 +325,17 @@ mod tests {
         let api = TestSyncClient::Default.login().await;
         let path = "testing.bin";
         let create_result = api.put_bytes(path, b"testing1".to_vec()).await?;
-        let create_metadata =
-            api.metadata(path)
-                .await?
-                .expect(&format!("unwrap error in {}:{}", file!(), line!()));
+        let create_metadata = api
+            .metadata(path)
+            .await?
+            .unwrap_or_else(|| panic!("unwrap error in {}:{}", file!(), line!()));
         assert_eq!(b"testing1".to_vec(), api.get(path).await?);
         let update_result = api.put_bytes(path, b"testing2".to_vec()).await?;
         assert_eq!(b"testing2".to_vec(), api.get(path).await?);
-        let update_metadata =
-            api.metadata(path)
-                .await?
-                .expect(&format!("unwrap error in {}:{}", file!(), line!()));
+        let update_metadata = api
+            .metadata(path)
+            .await?
+            .unwrap_or_else(|| panic!("unwrap error in {}:{}", file!(), line!()));
         assert!(update_result.created_time.is_none());
         assert_eq!(create_result.id, update_result.id);
         assert_eq!(create_result.name, update_result.name);

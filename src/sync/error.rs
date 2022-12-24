@@ -11,6 +11,8 @@ pub enum SyncError {
     IOError(#[from] io::Error),
     #[error("file not exists")]
     FileNotExists,
+    #[error("cannot handle conflitc for two different notes")]
+    HandleConflictForDiffNote,
     #[error("unknown")]
     Unknown,
     #[error("serialize error")]

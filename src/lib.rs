@@ -30,7 +30,7 @@ impl RuslinData {
         Ok(Self { db, sync_config })
     }
 
-    pub async fn sync(&self) -> SyncResult<()> {
+    async fn get_file_api_driver(&self) -> SyncResult<Box<dyn FileApiDriver>> {
         let sync_config = self.sync_config.read().clone();
         let sync_config = sync_config.ok_or(SyncError::SyncConfigNotExists)?;
         let file_api_driver = match &sync_config {
@@ -43,12 +43,23 @@ impl RuslinData {
                 Box::new(FileApiDriverJoplinServer::new(api))
             }
         };
+        Ok(file_api_driver)
+    }
+
+    pub async fn sync(&self) -> SyncResult<()> {
+        let file_api_driver = self.get_file_api_driver().await?;
         let synchronizer = Synchronizer::new(self.db.clone(), file_api_driver);
         synchronizer.start().await
     }
 
     pub fn sync_exists(&self) -> bool {
         self.sync_config.read().is_some()
+    }
+
+    pub async fn clear_remote(&self) -> SyncResult<()> {
+        let file_api_driver = self.get_file_api_driver().await?;
+        file_api_driver.clear_root("").await?;
+        Ok(())
     }
 
     pub async fn save_sync_config(&self, sync_config: SyncConfig) -> SyncResult<()> {

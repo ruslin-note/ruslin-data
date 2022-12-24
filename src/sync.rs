@@ -13,7 +13,9 @@ use serde::{Deserialize, Serialize};
 pub use serializer::{ForSyncSerializer, SerializeForSync};
 use tokio::{task::JoinSet, time::Instant};
 
-use crate::{Database, DateTimeTimestamp, Folder, ModelType, Note, Setting, UpdateSource};
+use crate::{
+    Database, DateTimeTimestamp, Folder, ModelType, Note, Setting, SyncItem, UpdateSource,
+};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum SyncConfig {
@@ -110,12 +112,29 @@ impl Synchronizer {
             let stat = self.file_api_driver.stat(&item.filepath()).await?;
             if stat.is_some() {
                 let content = self.file_api_driver.get(&item.filepath()).await?;
-                let des = ForSyncDeserializer::from_str(&content)?;
-                assert_eq!(item.item_type, des.r#type);
-                let remote_updated_time = des.get_updated_time()?;
+                let remote_des = ForSyncDeserializer::from_str(&content)?;
+                assert_eq!(item.item_type, remote_des.r#type);
+                let remote_updated_time = remote_des.get_updated_time()?;
                 if remote_updated_time > item.sync_time {
                     // remote.updated_time > local.sync_time -> conflict. both remote and local have changes
-                    todo!("both remote and local have changes")
+                    log::warn!(
+                        target: LOG_TARGET,
+                        "both remote and local have changes {:?} {}",
+                        remote_des.r#type,
+                        remote_des.id
+                    );
+                    match remote_des.r#type {
+                        ModelType::Note => {
+                            let local_note = self.db.load_note(&item.item_id)?;
+                            let remote_note = Note::dserialize(&remote_des)?;
+                            self.create_conflict_note(&local_note, Some(&remote_note))?;
+                            self.write_remote_to_local(&remote_des)?;
+                        }
+                        ModelType::Folder | ModelType::Unsupported => {
+                            // take the remote version
+                            self.write_remote_to_local(&remote_des)?;
+                        }
+                    }
                 } else {
                     log::debug!(
                         target: LOG_TARGET,
@@ -143,7 +162,21 @@ impl Synchronizer {
                     .await?;
             } else {
                 // remote == None && not first sync -> conflict. remote has beed deleted, but local has changes
-                todo!("remote has beed deleted, but local has changes")
+                log::warn!(
+                    "remote has beed deleted, but local has changes {:?} {}",
+                    item.item_type,
+                    item.item_id
+                );
+                match item.item_type {
+                    ModelType::Note => {
+                        let local_note = self.db.load_note(&item.item_id)?;
+                        self.create_conflict_note(&local_note, None)?;
+                        self.delete_local_by_sync(&item)?;
+                    }
+                    ModelType::Folder | ModelType::Unsupported => {
+                        self.delete_local_by_sync(&item)?;
+                    }
+                }
             }
         }
         Ok(())
@@ -188,57 +221,18 @@ impl Synchronizer {
                     .find(|i| i.item_id == remote_item.path_id());
                 if remote_item.is_deleted {
                     if let Some(local_sync_item) = local_sync_item {
-                        log::debug!(
-                            target: LOG_TARGET,
-                            "deleting {}({:?})",
-                            local_sync_item.item_id,
-                            local_sync_item.item_type
-                        );
-                        match local_sync_item.item_type {
-                            ModelType::Note => self
-                                .db
-                                .delete_note(&local_sync_item.item_id, UpdateSource::RemoteSync)?,
-                            ModelType::Folder => self.db.delete_folder(
-                                &local_sync_item.item_id,
-                                UpdateSource::RemoteSync,
-                            )?,
-                            ModelType::Unsupported => {
-                                log::warn!("skip unsupported type {}", local_sync_item.item_id);
-                            }
-                        }
+                        self.delete_local_by_sync(local_sync_item)?;
                     }
                 } else {
                     if let Some(local_sync_item) = local_sync_item {
                         if local_sync_item.sync_time > remote_item.updated_time {
-                            log::debug!(target: LOG_TARGET, "skip the update because the local sync time({:?}) is later than the remote update time({:?})", local_sync_item.sync_time, remote_item.updated_time);
+                            log::error!(target: LOG_TARGET, "skip the update because the local sync time({:?}) is later than the remote update time({:?})", local_sync_item.sync_time, remote_item.updated_time);
                             continue;
                         }
                     }
                     let content = handle.await??;
                     let des = ForSyncDeserializer::from_str(&content)?;
-                    match des.r#type {
-                        ModelType::Note => {
-                            let note = Note::dserialize(&des)?;
-                            log::debug!(
-                                target: LOG_TARGET,
-                                "pulling note {} to local",
-                                note.get_title()
-                            );
-                            self.db.replace_note(&note, UpdateSource::RemoteSync)?;
-                        }
-                        ModelType::Folder => {
-                            let folder = Folder::dserialize(&des)?;
-                            log::debug!(
-                                target: LOG_TARGET,
-                                "pulling folder {} to local",
-                                folder.get_title()
-                            );
-                            self.db.replace_folder(&folder, UpdateSource::RemoteSync)?;
-                        }
-                        ModelType::Unsupported => {
-                            log::warn!("skip unsupported type {content}");
-                        }
-                    }
+                    self.write_remote_to_local(&des)?;
                 }
             }
             context = list_result.context;
@@ -256,6 +250,73 @@ impl Synchronizer {
                 break;
             }
         }
+        Ok(())
+    }
+
+    fn write_remote_to_local(&self, des: &ForSyncDeserializer) -> SyncResult<()> {
+        match des.r#type {
+            ModelType::Note => {
+                let note = Note::dserialize(des)?;
+                log::debug!(
+                    target: LOG_TARGET,
+                    "pulling note {} to local",
+                    note.get_title()
+                );
+                self.db.replace_note(&note, UpdateSource::RemoteSync)?;
+            }
+            ModelType::Folder => {
+                let folder = Folder::dserialize(des)?;
+                log::debug!(
+                    target: LOG_TARGET,
+                    "pulling folder {} to local",
+                    folder.get_title()
+                );
+                self.db.replace_folder(&folder, UpdateSource::RemoteSync)?;
+            }
+            ModelType::Unsupported => {
+                log::warn!("skip unsupported type {:?}", des);
+            }
+        }
+        Ok(())
+    }
+
+    fn delete_local_by_sync(&self, sync_item: &SyncItem) -> SyncResult<()> {
+        log::debug!(
+            target: LOG_TARGET,
+            "deleting {}({:?})",
+            sync_item.item_id,
+            sync_item.item_type
+        );
+        match sync_item.item_type {
+            ModelType::Note => self
+                .db
+                .delete_note(&sync_item.item_id, UpdateSource::RemoteSync)?,
+            ModelType::Folder => self
+                .db
+                .delete_folder(&sync_item.item_id, UpdateSource::RemoteSync)?,
+            ModelType::Unsupported => {
+                log::warn!("skip unsupported type {}", sync_item.item_id);
+            }
+        }
+        Ok(())
+    }
+
+    fn create_conflict_note(
+        &self,
+        local_note: &Note,
+        remote_note: Option<&Note>,
+    ) -> SyncResult<()> {
+        if let Some(remote_note) = remote_note {
+            if local_note.id != remote_note.id {
+                return Err(SyncError::HandleConflictForDiffNote);
+            }
+            if local_note.title == remote_note.title && local_note.body == remote_note.body {
+                return Ok(());
+            }
+        }
+        let conflict_note = local_note.create_conflict_note();
+        self.db
+            .replace_note(&conflict_note, UpdateSource::RemoteSync)?;
         Ok(())
     }
 }

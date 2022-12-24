@@ -10,18 +10,17 @@ pub struct TestFileApiDriverLocal(FileApi<FileApiDriverLocal>, TempDir);
 
 impl TestFileApiDriverLocal {
     pub async fn temp() -> Self {
-        let temp_dir =
-            tempfile::TempDir::new().expect(&format!("unwrap error in {}:{}", file!(), line!()));
-        let base_dir =
-            temp_dir
-                .path()
-                .to_str()
-                .expect(&format!("unwrap error in {}:{}", file!(), line!()));
+        let temp_dir = tempfile::TempDir::new()
+            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
+        let base_dir = temp_dir
+            .path()
+            .to_str()
+            .unwrap_or_else(|| panic!("unwrap error in {}:{}", file!(), line!()));
         let file_api = FileApi::new(base_dir, FileApiDriverLocal::new());
         file_api
             .clear_root()
             .await
-            .expect(&format!("unwrap error in {}:{}", file!(), line!()));
+            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
         TestFileApiDriverLocal(file_api, temp_dir)
     }
 }
@@ -49,12 +48,12 @@ async fn test_get_a_file_info() -> SyncResult<()> {
     file_api.mkdir("sub").await?;
     file_api.put("sub/test2.txt", "testing").await?;
 
-    let stat = file_api.stat("test1.txt").await?;
+    let stat = file_api.stat("test1.txt").await?.unwrap();
     assert_eq!("test1.txt", stat.path);
     assert!(stat.updated_time > DateTimeTimestamp::zero());
     assert!(!stat.is_dir);
 
-    let stat = file_api.stat("sub/test2.txt").await?;
+    let stat = file_api.stat("sub/test2.txt").await?.unwrap();
     assert_eq!("sub/test2.txt", stat.path);
     assert!(stat.updated_time > DateTimeTimestamp::zero());
     assert!(!stat.is_dir);

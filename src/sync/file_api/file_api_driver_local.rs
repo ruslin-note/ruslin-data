@@ -52,7 +52,7 @@ impl FileApiDriver for FileApiDriverLocal {
             stat.path = entry
                 .file_name()
                 .to_str()
-                .expect(&format!("unwrap error in {}:{}", file!(), line!()))
+                .unwrap_or_else(|| panic!("unwrap error in {}:{}", file!(), line!()))
                 .to_string();
             stats.push(stat);
         }

@@ -8,14 +8,11 @@ pub struct TestDatabase(pub Database, TempDir);
 
 impl TestDatabase {
     pub fn temp() -> Self {
-        let temp_dir =
-            tempfile::TempDir::new().expect(&format!("unwrap error in {}:{}", file!(), line!()));
+        let temp_dir = tempfile::TempDir::new()
+            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
         let filename = "test.sqlite";
-        let db = Database::new_with_filename(temp_dir.path(), filename).expect(&format!(
-            "unwrap error in {}:{}",
-            file!(),
-            line!()
-        ));
+        let db = Database::new_with_filename(temp_dir.path(), filename)
+            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
         Self(db, temp_dir)
     }
 }

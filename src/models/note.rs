@@ -105,6 +105,14 @@ impl Note {
     pub fn md_file_path(&self) -> String {
         format!("{}.md", self.id.as_str())
     }
+
+    pub fn create_conflict_note(&self) -> Self {
+        let mut conflict_note = self.clone();
+        conflict_note.is_conflict = true;
+        conflict_note.id = new_id();
+        conflict_note.conflict_original_id = Some(self.id.clone());
+        conflict_note
+    }
 }
 
 impl Hash for AbbrNote {

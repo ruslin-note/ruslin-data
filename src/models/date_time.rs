@@ -136,15 +136,15 @@ mod tests {
     #[test]
     fn test_date_time_serialize() {
         let dt = DateTimeRFC333::from_timestamp_millis(1668922083344);
-        let serialized_str =
-            serde_json::to_string(&dt).expect(&format!("unwrap error in {}:{}", file!(), line!()));
+        let serialized_str = serde_json::to_string(&dt)
+            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
         assert_eq!(r#""2022-11-20T05:28:03.344Z""#, serialized_str);
     }
 
     #[test]
     fn test_date_time_deserialize() {
         let dt: DateTimeRFC333 = serde_json::from_str(r#""2022-11-20T05:28:03.344Z""#)
-            .expect(&format!("unwrap error in {}:{}", file!(), line!()));
+            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
         assert_eq!(1668922083344, dt.timestamp_millis());
     }
 

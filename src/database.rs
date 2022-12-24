@@ -4,8 +4,9 @@ mod error;
 pub use error::DatabaseError;
 
 use diesel::{
+    dsl::exists,
     r2d2::{ConnectionManager, Pool},
-    ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, SqliteConnection,
+    select, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, SqliteConnection,
 };
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::{
@@ -149,6 +150,7 @@ impl Database {
         );
         let query_stmt = notes::table
             .select(selection)
+            .filter(notes::is_conflict.eq(false))
             .order(notes::updated_time.desc());
         Ok(match parent_id {
             Some(parent_id) => query_stmt
@@ -156,6 +158,31 @@ impl Database {
                 .load(&mut conn),
             None => query_stmt.load(&mut conn),
         }?)
+    }
+
+    pub fn load_abbr_conflict_notes(&self) -> DatabaseResult<Vec<AbbrNote>> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::notes;
+        Ok(notes::table
+            .select((
+                notes::id,
+                notes::parent_id,
+                notes::title,
+                notes::created_time,
+                notes::updated_time,
+            ))
+            .filter(notes::is_conflict.eq(true))
+            .order(notes::updated_time.desc())
+            .load(&mut conn)?)
+    }
+
+    pub fn conflict_notes_exist(&self) -> DatabaseResult<bool> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::notes;
+        Ok(
+            select(exists(notes::table.filter(notes::is_conflict.eq(true))))
+                .get_result(&mut conn)?,
+        )
     }
 
     pub fn load_note(&self, id: &str) -> DatabaseResult<Note> {
