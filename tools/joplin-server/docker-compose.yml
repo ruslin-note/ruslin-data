@@ -2,7 +2,7 @@ version: '3'
 
 services:
     app:
-        image: joplin/server:2.9.7-beta
+        image: joplin/server:2.10.4-beta
         container_name: joplin-test-server
         ports:
             - "22300:22300"
