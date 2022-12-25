@@ -238,17 +238,17 @@ impl JoplinServerAPI {
         let res = Self::check_response(res).await?;
         let mut delta_result: DeltaResult = res.json().await?;
         delta_result.items.retain(|item| {
-                if item.item_name.starts_with("locks/") {
-                    return false;
-                }
-                if item.item_name.starts_with("temp/") {
-                    return false;
-                }
-                if item.item_name.starts_with(".resource/") {
-                    return false;
-                }
-                true
-            });
+            if item.item_name.starts_with("locks/") {
+                return false;
+            }
+            if item.item_name.starts_with("temp/") {
+                return false;
+            }
+            if item.item_name.starts_with(".resource/") {
+                return false;
+            }
+            true
+        });
         Ok(delta_result)
     }
 

@@ -18,8 +18,6 @@ use crate::{
     Database, DateTimeTimestamp, Folder, ModelType, Note, Setting, SyncItem, UpdateSource,
 };
 
-
-
 #[derive(Serialize, Deserialize, Clone)]
 pub enum SyncConfig {
     JoplinServer {

@@ -62,6 +62,14 @@ impl RuslinData {
         Ok(())
     }
 
+    pub fn get_sync_config(&self) -> SyncResult<Option<SyncConfig>> {
+        let sync_config = self.db.get_setting_value(Setting::FILE_API_SYNC_CONFIG)?;
+        Ok(match sync_config {
+            Some(sync_config) => Some(serde_json::from_str(&sync_config.value)?),
+            None => None,
+        })
+    }
+
     pub async fn save_sync_config(&self, sync_config: SyncConfig) -> SyncResult<()> {
         match &sync_config {
             SyncConfig::JoplinServer {

@@ -69,8 +69,7 @@ impl LockHandler {
         client_type: LockClientType,
         client_id: &str,
     ) -> SyncResult<Lock> {
-        self
-            .file_api_driver
+        self.file_api_driver
             .acquire_lock(LockType::Sync, client_type, client_id)
             .await
     }
@@ -83,8 +82,7 @@ impl LockHandler {
         client_type: LockClientType,
         client_id: &str,
     ) -> SyncResult<()> {
-        self
-            .file_api_driver
+        self.file_api_driver
             .release_lock(lock_type, client_type, client_id)
             .await
     }
