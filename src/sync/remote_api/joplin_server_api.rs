@@ -3,9 +3,11 @@ use reqwest::{Client, RequestBuilder, Response};
 use reqwest::{Error as ResError, Method};
 use serde::{Deserialize, Serialize};
 
+use serde_json::json;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use thiserror::Error;
 
+use crate::sync::lock_handler::{Lock, LockClientType, LockList, LockType};
 use crate::{sync::SyncError, DateTimeTimestamp};
 
 pub type JoplinServerResult<T> = Result<T, JoplinServerError>;
@@ -121,6 +123,10 @@ impl JoplinServerAPI {
         format!("{}/api/items/root:/{}:", self.host, path)
     }
 
+    fn with_api(&self, path: &str) -> String {
+        format!("{}/api/{}", self.host, path)
+    }
+
     fn request_builder(&self, method: Method, path: &str) -> RequestBuilder {
         self.client
             .request(method, path)
@@ -230,7 +236,20 @@ impl JoplinServerAPI {
         }
         let res = builder.send().await?;
         let res = Self::check_response(res).await?;
-        Ok(res.json().await?)
+        let mut delta_result: DeltaResult = res.json().await?;
+        delta_result.items.retain(|item| {
+                if item.item_name.starts_with("locks/") {
+                    return false;
+                }
+                if item.item_name.starts_with("temp/") {
+                    return false;
+                }
+                if item.item_name.starts_with(".resource/") {
+                    return false;
+                }
+                true
+            });
+        Ok(delta_result)
     }
 
     pub async fn root_list(&self, cursor: Option<&str>) -> JoplinServerResult<ListResult> {
@@ -248,6 +267,48 @@ impl JoplinServerAPI {
         if let Some(cursor) = cursor {
             builder = builder.query(&[("cursor", cursor)]);
         }
+        let res = builder.send().await?;
+        let res = Self::check_response(res).await?;
+        Ok(res.json().await?)
+    }
+
+    pub async fn acquire_lock(
+        &self,
+        r#type: LockType,
+        client_type: LockClientType,
+        client_id: &str,
+    ) -> JoplinServerResult<Lock> {
+        let mut builder = self.request_builder(Method::POST, &self.with_api("locks"));
+        builder = builder.json(&json!({
+            "type": r#type,
+            "clientType": client_type,
+            "clientId": client_id,
+        }));
+        let res = builder.send().await?;
+        let res = Self::check_response(res).await?;
+        Ok(res.json().await?)
+    }
+
+    pub async fn release_lock(
+        &self,
+        r#type: LockType,
+        client_type: LockClientType,
+        client_id: &str,
+    ) -> JoplinServerResult<()> {
+        let builder = self.request_builder(
+            Method::DELETE,
+            &self.with_api(&format!(
+                "locks/{}_{}_{}",
+                r#type as u8, client_type as u8, client_id
+            )),
+        );
+        let res = builder.send().await?;
+        Self::check_response(res).await?;
+        Ok(())
+    }
+
+    pub async fn list_locks(&self) -> JoplinServerResult<LockList> {
+        let builder = self.request_builder(Method::GET, &self.with_api("locks"));
         let res = builder.send().await?;
         let res = Self::check_response(res).await?;
         Ok(res.json().await?)
@@ -301,7 +362,13 @@ pub mod test_api {
 
 #[cfg(test)]
 mod tests {
-    use crate::{sync::SerializeForSync, Folder, Note};
+    use crate::{
+        sync::{
+            lock_handler::{LockClientType, LockType},
+            SerializeForSync,
+        },
+        Folder, Note,
+    };
 
     use super::{test_api::TestSyncClient, JoplinServerResult};
 
@@ -395,6 +462,23 @@ mod tests {
             .await?;
         api.delete(&test_folder_path).await?;
         api.delete(&test_note_path).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_lock() -> JoplinServerResult<()> {
+        let api = TestSyncClient::Default.login().await;
+        let lock = api
+            .acquire_lock(LockType::Sync, LockClientType::Cli, "test")
+            .await?;
+        assert_eq!("test", lock.client_id);
+        let locks = api.list_locks().await?;
+        assert!(!locks.items.is_empty());
+        assert_eq!(lock, locks.items[0]);
+        api.release_lock(lock.r#type, lock.client_type, &lock.client_id)
+            .await?;
+        let locks = api.list_locks().await?;
+        assert!(locks.items.is_empty());
         Ok(())
     }
 }

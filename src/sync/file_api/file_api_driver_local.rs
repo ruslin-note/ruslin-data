@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 
-use crate::sync::{SyncError, SyncResult};
+use crate::sync::{
+    lock_handler::{Lock, LockClientType, LockList, LockType},
+    SyncError, SyncResult,
+};
 
 use super::{
     file_api_driver::{Stat, StatList},
@@ -115,5 +118,27 @@ impl FileApiDriver for FileApiDriverLocal {
 
     async fn check_config(&self) -> SyncResult<()> {
         Ok(())
+    }
+
+    async fn acquire_lock(
+        &self,
+        _type: LockType,
+        _client_type: LockClientType,
+        _client_id: &str,
+    ) -> SyncResult<Lock> {
+        todo!()
+    }
+
+    async fn release_lock(
+        &self,
+        _type: LockType,
+        _client_type: LockClientType,
+        _client_id: &str,
+    ) -> SyncResult<()> {
+        todo!()
+    }
+
+    async fn list_locks(&self) -> SyncResult<LockList> {
+        todo!()
     }
 }

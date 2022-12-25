@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use crate::sync::{
+    lock_handler::{Lock, LockClientType, LockList, LockType},
     remote_api::{DeltaItem, JoplinServerAPI},
     SyncError, SyncResult,
 };
@@ -49,7 +50,7 @@ impl FileApiDriver for FileApiDriverJoplinServer {
     }
 
     fn supports_locks(&self) -> bool {
-        todo!()
+        true
     }
 
     fn request_repeat_count(&self) -> u32 {
@@ -148,6 +149,28 @@ impl FileApiDriver for FileApiDriverJoplinServer {
         }
         self.api.delete(path).await?;
         Ok(())
+    }
+
+    async fn acquire_lock(
+        &self,
+        _type: LockType,
+        _client_type: LockClientType,
+        _client_id: &str,
+    ) -> SyncResult<Lock> {
+        todo!()
+    }
+
+    async fn release_lock(
+        &self,
+        _type: LockType,
+        _client_type: LockClientType,
+        _client_id: &str,
+    ) -> SyncResult<()> {
+        todo!()
+    }
+
+    async fn list_locks(&self) -> SyncResult<LockList> {
+        todo!()
     }
 }
 

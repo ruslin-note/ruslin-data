@@ -12,6 +12,7 @@ pub struct Setting {
 impl Setting {
     pub const FILE_API_SYNC_CONFIG: &str = "file_api.sync_config";
     pub const FILE_API_DELTA_CONTEXT: &str = "file_api.delta_context";
+    pub const CLIENT_ID: &str = "client_id";
 }
 
 #[derive(Debug, Insertable)]

@@ -1,6 +1,7 @@
 mod deserialize;
 mod error;
 mod file_api;
+pub mod lock_handler;
 pub mod remote_api;
 mod serializer;
 
@@ -16,6 +17,8 @@ use tokio::{task::JoinSet, time::Instant};
 use crate::{
     Database, DateTimeTimestamp, Folder, ModelType, Note, Setting, SyncItem, UpdateSource,
 };
+
+
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum SyncConfig {
@@ -40,13 +43,23 @@ const LOG_TARGET: &str = "Synchronizer";
 pub struct Synchronizer {
     db: Arc<Database>,
     file_api_driver: Arc<Box<dyn FileApiDriver>>,
+    // lock_handler: LockHandler,
 }
+
+// #[cfg(target_os = "android")]
+// const DEFAULT_LOCK_CLIENT_TYPE: LockClientType = LockClientType::Mobile;
+// #[cfg(target_os = "linux")]
+// const DEFAULT_LOCK_CLIENT_TYPE: LockClientType = LockClientType::Desktop;
+// #[cfg(not(any(target_os = "linux", target_os = "android")))]
+// const DEFAULT_LOCK_CLIENT_TYPE: LockClientType = LockClientType::Cli;
 
 impl Synchronizer {
     pub fn new(db: Arc<Database>, file_api_driver: Box<dyn FileApiDriver>) -> Self {
+        let file_api_driver = Arc::new(file_api_driver);
         Self {
             db,
-            file_api_driver: Arc::new(file_api_driver),
+            file_api_driver: file_api_driver.clone(),
+            // lock_handler: LockHandler::new(file_api_driver),
         }
     }
 

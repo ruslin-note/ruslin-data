@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use diesel::{
     backend::RawValue,
@@ -15,7 +17,6 @@ use serde::{Deserialize, Deserializer, Serialize};
     Hash,
     Clone,
     Copy,
-    Debug,
     AsExpression,
     FromSqlRow,
     PartialOrd,
@@ -25,6 +26,14 @@ use serde::{Deserialize, Deserializer, Serialize};
 )]
 #[diesel(sql_type = BigInt)]
 pub struct DateTimeTimestamp(i64);
+
+impl Debug for DateTimeTimestamp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("DateTimeTimestamp")
+            .field(&self.format_ymd_hms())
+            .finish()
+    }
+}
 
 impl DateTimeTimestamp {
     pub fn now() -> Self {

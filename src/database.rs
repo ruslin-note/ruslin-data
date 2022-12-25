@@ -17,6 +17,7 @@ use std::{
 use crate::{
     database::connection_options::ConnectionOptions,
     models::Folder,
+    new_id,
     sync::{ForSyncSerializer, SerializeForSync},
     AbbrNote, DateTimeTimestamp, DeletedItem, ModelType, NewDeletedItem, NewSetting, NewSyncItem,
     Note, Setting, SyncItem,
@@ -437,5 +438,17 @@ impl Database {
             .filter(settings::key.eq(key))
             .execute(&mut conn)?;
         Ok(())
+    }
+
+    pub fn get_client_id(&self) -> DatabaseResult<String> {
+        let setting = self.get_setting_value(Setting::CLIENT_ID)?;
+        match setting {
+            Some(s) => Ok(s.value),
+            None => {
+                let id = new_id();
+                self.replace_setting(Setting::CLIENT_ID, &id)?;
+                Ok(id)
+            }
+        }
     }
 }

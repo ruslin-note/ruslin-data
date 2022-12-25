@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+use crate::sync::lock_handler::{Lock, LockClientType, LockList, LockType};
 use crate::sync::{SyncError, SyncResult};
 use crate::DateTimeTimestamp;
 use std::fmt::Debug;
@@ -98,7 +99,17 @@ pub trait FileApiDriver: Send + Sync + Debug {
     async fn r#move(&self, old_path: &str, new_path: &str) -> SyncResult<()>;
     async fn clear_root(&self, base_dir: &str) -> SyncResult<()>;
     async fn check_config(&self) -> SyncResult<()>;
-    // public async acquireLock(type: LockType, clientType: LockClientType, clientId: string): Promise<Lock>
-    // public async releaseLock(type: LockType, clientType: LockClientType, clientId: string)
-    // public async listLocks()
+    async fn acquire_lock(
+        &self,
+        r#type: LockType,
+        client_type: LockClientType,
+        client_id: &str,
+    ) -> SyncResult<Lock>;
+    async fn release_lock(
+        &self,
+        r#type: LockType,
+        client_type: LockClientType,
+        client_id: &str,
+    ) -> SyncResult<()>;
+    async fn list_locks(&self) -> SyncResult<LockList>;
 }
