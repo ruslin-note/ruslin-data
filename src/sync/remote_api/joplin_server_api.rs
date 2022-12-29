@@ -25,7 +25,7 @@ pub enum JoplinServerError {
 
 impl From<JoplinServerError> for SyncError {
     fn from(err: JoplinServerError) -> Self {
-        Self::APIError(format!("{:?}", err))
+        Self::APIError(Box::new(err))
     }
 }
 

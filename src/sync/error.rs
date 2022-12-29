@@ -7,7 +7,7 @@ pub type SyncResult<T> = std::result::Result<T, SyncError>;
 
 #[derive(Error, Debug)]
 pub enum SyncError {
-    #[error("io error")]
+    #[error("io error: {0}")]
     IOError(#[from] io::Error),
     #[error("file not exists")]
     FileNotExists,
@@ -15,17 +15,19 @@ pub enum SyncError {
     HandleConflictForDiffNote,
     #[error("unknown")]
     Unknown,
-    #[error("serialize error")]
+    #[error("serialize error: {0}")]
     SerializeError(String),
-    #[error("api error")]
-    APIError(String),
-    #[error("join error")]
+    #[error("api error: {0}")]
+    APIError(Box<dyn std::error::Error + Send + Sync>),
+    #[error("misconfiguration")]
+    Misconfiguration,
+    #[error("join error: {0}")]
     JoinError(#[from] tokio::task::JoinError),
-    #[error("database error")]
+    #[error("database error: {0}")]
     DatabaseError(#[from] DatabaseError),
-    #[error("deserialize error")]
+    #[error("deserialize error: {key} -> {val}")]
     DeserializeError { key: String, val: String },
-    #[error("serde json error")]
+    #[error("serde json error: {0}")]
     SerdeJsonError(#[from] serde_json::Error),
     #[error("sync config not exists")]
     SyncConfigNotExists,

@@ -145,7 +145,7 @@ impl FileApiDriver for FileApiDriverJoplinServer {
         let content = "testing";
         self.api.put(path, content.to_string()).await?;
         if content != self.api.get_text(path).await? {
-            return Err(SyncError::APIError("config error".to_string()));
+            return Err(SyncError::Misconfiguration);
         }
         self.api.delete(path).await?;
         Ok(())
