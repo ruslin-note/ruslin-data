@@ -94,7 +94,10 @@ fn test_search_chinese_notes() -> DatabaseResult<()> {
     )?;
     db.rebuild_fts()?;
     let notes = db.search_notes("我")?;
-    // assert_eq!(3, notes.len());
     println!("notes: {:?}", notes);
+    use jieba_rs::Jieba;
+    let jieba = Jieba::new();
+    let words = jieba.cut("我是中国人", false);
+    println!("words: {:?}", words);
     Ok(())
 }
