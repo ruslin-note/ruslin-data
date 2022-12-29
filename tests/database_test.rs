@@ -61,3 +61,40 @@ fn test_load_abbr_notes_order() -> DatabaseResult<()> {
     assert_eq!(note_1.title, notes[1].title);
     Ok(())
 }
+
+#[test]
+fn test_search_notes() -> DatabaseResult<()> {
+    let db = TestDatabase::temp();
+    db.replace_note(
+        &Note::new(None, "abcd efgh".to_string(), "abcd".to_string()),
+        UpdateSource::LocalEdit,
+    )?;
+    db.replace_note(
+        &Note::new(None, "abcd".to_string(), "".to_string()),
+        UpdateSource::LocalEdit,
+    )?;
+    db.replace_note(
+        &Note::new(None, "efgh".to_string(), "abcd".to_string()),
+        UpdateSource::LocalEdit,
+    )?;
+    db.rebuild_fts()?;
+    let notes = db.search_notes("abcd")?;
+    assert_eq!(3, notes.len());
+    let notes = db.search_notes("efgh")?;
+    assert_eq!(2, notes.len());
+    Ok(())
+}
+
+#[test]
+fn test_search_chinese_notes() -> DatabaseResult<()> {
+    let db = TestDatabase::temp();
+    db.replace_note(
+        &Note::new(None, "我是中国人".to_string(), "中文测试".to_string()),
+        UpdateSource::LocalEdit,
+    )?;
+    db.rebuild_fts()?;
+    let notes = db.search_notes("我")?;
+    // assert_eq!(3, notes.len());
+    println!("notes: {:?}", notes);
+    Ok(())
+}

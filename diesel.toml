@@ -3,6 +3,13 @@
 
 [print_schema]
 file = "src/schema.rs"
+filter = { except_tables = [
+    "notes_fts",
+    "notes_fts_docsize",
+    "notes_fts_segdir",
+    "notes_fts_segments",
+    "notes_fts_stat"
+]}
 
 [migrations_directory]
 dir = "migrations"

@@ -16,7 +16,7 @@ use diesel::{
     AsExpression, FromSqlRow,
 };
 pub use folder::Folder;
-pub use note::{AbbrNote, Note};
+pub use note::{notes_fts, AbbrNote, Note, NoteFts};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 pub use setting::{NewSetting, Setting};
 pub use sync_item::{NewSyncItem, SyncItem, SyncTarget};

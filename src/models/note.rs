@@ -19,6 +19,29 @@ pub struct AbbrNote {
     pub updated_time: DateTimeTimestamp,
 }
 
+diesel::table! {
+    notes_fts (id) {
+        id -> Text,
+        title -> Text,
+        body -> Text,
+    }
+}
+
+#[derive(Clone, Identifiable, Insertable, Queryable, Eq, Debug)]
+#[diesel(primary_key(id))]
+#[diesel(table_name = notes)]
+pub struct NoteFts {
+    pub id: String,
+    pub title: String,
+    pub body: String,
+}
+
+impl PartialEq for NoteFts {
+    fn eq(&self, other: &NoteFts) -> bool {
+        self.id == other.id
+    }
+}
+
 #[derive(Clone, Identifiable, Insertable, Queryable, Debug)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = notes)]

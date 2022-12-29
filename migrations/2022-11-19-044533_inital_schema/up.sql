@@ -59,6 +59,10 @@ CREATE INDEX notes_order ON notes (`order`);
 
 ---
 
+CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(content='notes', id UNINDEXED, body, title);
+
+---
+
 CREATE TABLE sync_items (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     sync_target INT NOT NULL,

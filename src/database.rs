@@ -6,7 +6,8 @@ pub use error::DatabaseError;
 use diesel::{
     dsl::exists,
     r2d2::{ConnectionManager, Pool},
-    select, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, SqliteConnection,
+    select, sql_query, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
+    SqliteConnection,
 };
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::{
@@ -14,13 +15,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use connection_options::ConnectionOptions;
+
 use crate::{
-    database::connection_options::ConnectionOptions,
     models::Folder,
     new_id,
     sync::{ForSyncSerializer, SerializeForSync},
     AbbrNote, DateTimeTimestamp, DeletedItem, ModelType, NewDeletedItem, NewSetting, NewSyncItem,
-    Note, Setting, SyncItem,
+    Note, NoteFts, Setting, SyncItem,
 };
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
@@ -59,7 +61,7 @@ impl Database {
             .to_string();
         let manager = ConnectionManager::<SqliteConnection>::new(database_url);
         let connection_pool = Pool::builder()
-            .connection_customizer(Box::new(ConnectionOptions::default()))
+            .connection_customizer(Box::<ConnectionOptions>::default())
             .max_size(16)
             .build(manager)?;
 
@@ -263,6 +265,25 @@ impl Database {
         //     .filter(notes::parent_id.eq_any(folder_id))
         //     .execute(&mut conn)?;
         Ok(())
+    }
+
+    pub fn rebuild_fts(&self) -> DatabaseResult<()> {
+        log::info!("rebuilding notes_fts");
+        let mut conn = self.connection_pool.get()?;
+        sql_query("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')").execute(&mut conn)?;
+        Ok(())
+    }
+
+    pub fn search_notes(&self, search_term: &str) -> DatabaseResult<Vec<NoteFts>> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::notes_fts;
+        Ok(notes_fts::table
+            .select((notes_fts::id, notes_fts::title, notes_fts::body))
+            .filter(diesel::dsl::sql::<diesel::sql_types::Bool>(&format!(
+                "notes_fts MATCH '{}'",
+                search_term
+            )))
+            .load(&mut conn)?)
     }
 }
 
