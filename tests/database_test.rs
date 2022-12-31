@@ -78,9 +78,9 @@ fn test_search_notes() -> DatabaseResult<()> {
         UpdateSource::LocalEdit,
     )?;
     db.rebuild_fts()?;
-    let notes = db.search_notes("abcd")?;
+    let notes = db.search_notes("abcd", false)?;
     assert_eq!(3, notes.len());
-    let notes = db.search_notes("efgh")?;
+    let notes = db.search_notes("efgh", false)?;
     assert_eq!(2, notes.len());
     Ok(())
 }
@@ -91,13 +91,19 @@ fn test_search_chinese_notes() -> DatabaseResult<()> {
     let note = Note::new(None, "我是中国人".to_string(), "中文测试".to_string());
     db.replace_note(&note, UpdateSource::LocalEdit)?;
     db.rebuild_fts()?;
-    let notes = db.search_notes("中国")?;
+    let notes = db.search_notes("中国", true)?;
     assert_eq!(1, notes.len());
-    let notes = db.search_notes("我")?;
+    assert_eq!("我是<mark>中国</mark>人", notes[0].title);
+    let notes = db.search_notes("中国", false)?;
     assert_eq!(1, notes.len());
-    let notes = db.search_notes("国人")?;
+    assert_eq!("我是中国人", notes[0].title);
+
+    let notes = db.search_notes("我", true)?;
+    assert_eq!(1, notes.len());
+    let notes = db.search_notes("国人", true)?;
     assert_eq!(0, notes.len());
-    let notes = db.search_notes("测试")?;
+    let notes = db.search_notes("测试", true)?;
+    assert_eq!("中文<mark>测试</mark>", notes[0].body);
     assert_eq!(1, notes.len());
     Ok(())
 }

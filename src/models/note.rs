@@ -27,7 +27,7 @@ diesel::table! {
     }
 }
 
-#[derive(Clone, Identifiable, Insertable, Queryable, Eq, Debug)]
+#[derive(Clone, Identifiable, Insertable, Queryable, QueryableByName, Eq, Debug)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = notes)]
 pub struct NoteFts {

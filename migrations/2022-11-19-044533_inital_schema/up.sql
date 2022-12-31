@@ -59,7 +59,7 @@ CREATE INDEX notes_order ON notes (`order`);
 
 ---
 
-CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(content='notes', id UNINDEXED, body, title, tokenize="jieba");
+CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(content='notes', id UNINDEXED, title, body, tokenize="jieba");
 
 ---
 

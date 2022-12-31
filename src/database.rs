@@ -29,6 +29,13 @@ use crate::{
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
 
+// use diesel::prelude::sql_function;
+// use diesel::sql_types::Text;
+// how to declare a sql_function?
+// sql_function! {
+//     fn highlight(table: Text, column: Integer, before: Text, after: Text) -> Text;
+// }
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpdateSource {
     RemoteSync,
@@ -276,16 +283,26 @@ impl Database {
         Ok(())
     }
 
-    pub fn search_notes(&self, search_term: &str) -> DatabaseResult<Vec<NoteFts>> {
+    pub fn search_notes(
+        &self,
+        search_term: &str,
+        enable_highlight: bool,
+    ) -> DatabaseResult<Vec<NoteFts>> {
         let mut conn = self.connection_pool.get()?;
         use crate::notes_fts;
-        Ok(notes_fts::table
-            .select((notes_fts::id, notes_fts::title, notes_fts::body))
-            .filter(diesel::dsl::sql::<diesel::sql_types::Bool>(&format!(
-                "notes_fts MATCH '{}' ORDER BY bm25(notes_fts)",
-                search_term
-            )))
-            .load(&mut conn)?)
+        if enable_highlight {
+            let query = format!("SELECT `notes_fts`.`id`, highlight(`notes_fts`, 1, '<mark>', '</mark>') as `title`, highlight(`notes_fts`, 2, '<mark>', '</mark>') as `body` FROM `notes_fts` WHERE notes_fts MATCH '{}' ORDER BY bm25(notes_fts);", search_term);
+            Ok(sql_query(query).load(&mut conn)?)
+        } else {
+            // let body = highlight(notes_fts_table, 2, "<b>", "</b>");
+            Ok(notes_fts::table
+                .select((notes_fts::id, notes_fts::title, notes_fts::body))
+                .filter(diesel::dsl::sql::<diesel::sql_types::Bool>(&format!(
+                    "notes_fts MATCH '{}' ORDER BY bm25(notes_fts)",
+                    search_term
+                )))
+                .load(&mut conn)?)
+        }
     }
 }
 
