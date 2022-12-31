@@ -12,7 +12,7 @@ impl TestDatabase {
             .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
         let filename = "test.sqlite";
         let db = Database::new_with_filename(temp_dir.path(), filename)
-            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
+            .unwrap_or_else(|e| panic!("unwrap error {e:?} in {}:{}", file!(), line!()));
         Self(db, temp_dir)
     }
 }
@@ -105,5 +105,24 @@ fn test_search_chinese_notes() -> DatabaseResult<()> {
     let notes = db.search_notes("测试", true)?;
     assert_eq!("中文<mark>测试</mark>", notes[0].body);
     assert_eq!(1, notes.len());
+    Ok(())
+}
+
+#[test]
+fn test_search_notes_update() -> DatabaseResult<()> {
+    let db = TestDatabase::temp();
+    let mut note = Note::new(None, "abcd efgh".to_string(), "abcd".to_string());
+    db.replace_note(&note, UpdateSource::LocalEdit)?;
+    let notes = db.search_notes("efgh", false)?;
+    assert_eq!(1, notes.len());
+    note.title = "abcd".to_string();
+    db.replace_note(&note, UpdateSource::LocalEdit)?;
+    let notes = db.search_notes("efgh", false)?;
+    assert_eq!(0, notes.len());
+    let notes = db.search_notes("abcd", false)?;
+    assert_eq!(1, notes.len());
+    db.delete_note(&note.id, UpdateSource::LocalEdit)?;
+    let notes = db.search_notes("abcd", false)?;
+    assert_eq!(0, notes.len());
     Ok(())
 }

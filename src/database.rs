@@ -91,7 +91,7 @@ impl Database {
         let mut connection = self.connection_pool.get()?;
         connection.run_pending_migrations(MIGRATIONS).map_err(|e| {
             log::error!("Database migration failed: {}", e);
-            DatabaseError::Migration
+            DatabaseError::Migration(e)
         })?;
         diesel::sql_query("PRAGMA journal_mode = WAL").execute(&mut connection)?;
         Ok(())
@@ -242,9 +242,18 @@ impl Database {
         };
         let mut conn = self.connection_pool.get()?;
         use crate::schema::notes;
-        diesel::replace_into(notes::table)
-            .values(&note)
-            .execute(&mut conn)?;
+        let note_exist: bool = select(exists(notes::table.filter(notes::id.eq(note.id.as_str()))))
+            .get_result(&mut conn)?;
+        if note_exist {
+            diesel::update(notes::table)
+                .filter(notes::id.eq(note.id.as_str()))
+                .set(&note)
+                .execute(&mut conn)?;
+        } else {
+            diesel::insert_into(notes::table)
+                .values(&note)
+                .execute(&mut conn)?;
+        }
         self.replace_sync_item(ModelType::Note, note.id.as_str(), update_source)?;
         Ok(())
     }
@@ -291,7 +300,7 @@ impl Database {
         let mut conn = self.connection_pool.get()?;
         use crate::notes_fts;
         if enable_highlight {
-            let query = format!("SELECT `notes_fts`.`id`, highlight(`notes_fts`, 1, '<mark>', '</mark>') as `title`, highlight(`notes_fts`, 2, '<mark>', '</mark>') as `body` FROM `notes_fts` WHERE notes_fts MATCH '{}' ORDER BY bm25(notes_fts);", search_term);
+            let query = format!("SELECT `notes_fts`.`id`, highlight(`notes_fts`, 0, '<mark>', '</mark>') as `title`, highlight(`notes_fts`, 1, '<mark>', '</mark>') as `body` FROM `notes_fts` WHERE notes_fts MATCH '{}' ORDER BY bm25(notes_fts);", search_term);
             Ok(sql_query(query).load(&mut conn)?)
         } else {
             // let body = highlight(notes_fts_table, 2, "<b>", "</b>");

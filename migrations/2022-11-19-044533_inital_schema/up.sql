@@ -59,7 +59,18 @@ CREATE INDEX notes_order ON notes (`order`);
 
 ---
 
-CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(content='notes', id UNINDEXED, title, body, tokenize="jieba");
+CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(content='notes', content_rowid=rowid, title, body, id UNINDEXED, tokenize="jieba");
+
+CREATE TRIGGER notes_after_insert AFTER INSERT ON notes BEGIN
+    INSERT INTO notes_fts(rowid, title, body, id) VALUES (new.rowid, new.title, new.body, new.id);
+END;
+CREATE TRIGGER notes_after_delete AFTER DELETE ON notes BEGIN
+    INSERT INTO notes_fts(notes_fts, rowid, title, body, id) VALUES ('delete', old.rowid, old.title, old.body, old.id);
+END;
+CREATE TRIGGER notes_after_update AFTER UPDATE ON notes BEGIN
+    INSERT INTO notes_fts(notes_fts, rowid, title, body, id) VALUES ('delete', old.rowid, old.title, old.body, old.id);
+    INSERT INTO notes_fts(rowid, title, body, id) VALUES (new.rowid, new.title, new.body, new.id);
+END;
 
 ---
 

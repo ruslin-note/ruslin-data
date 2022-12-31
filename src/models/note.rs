@@ -20,7 +20,8 @@ pub struct AbbrNote {
 }
 
 diesel::table! {
-    notes_fts (id) {
+    notes_fts (rowid) {
+        rowid -> Integer,
         id -> Text,
         title -> Text,
         body -> Text,
@@ -42,7 +43,7 @@ impl PartialEq for NoteFts {
     }
 }
 
-#[derive(Clone, Identifiable, Insertable, Queryable, Debug)]
+#[derive(Clone, Identifiable, Insertable, AsChangeset, Queryable, Debug)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = notes)]
 pub struct Note {

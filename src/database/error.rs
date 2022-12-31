@@ -12,8 +12,8 @@ pub enum DatabaseError {
     InvalidPath(#[from] io::Error),
     #[error("Error updating data")]
     Update,
-    #[error("Error migrating db schema")]
-    Migration,
+    #[error("Error migrating db schema {0}")]
+    Migration(Box<dyn std::error::Error + Send + Sync>),
     #[error("Error deleting data")]
     Delete,
     #[error("Error retrieving data")]
