@@ -18,6 +18,7 @@ pub struct SqliteError;
 const FTS5_TOKENIZE_QUERY_PREFIX: c_int = ffi::FTS5_TOKENIZE_QUERY | ffi::FTS5_TOKENIZE_PREFIX;
 
 /// Reason the tokenizer is being called
+#[derive(Debug)]
 pub enum TokenizeReason {
     /// Document is being inseted or removed
     Document,
@@ -29,6 +30,7 @@ pub enum TokenizeReason {
     /// Manually invoked via `fts5_api.xTokenize`.
     Aux,
 }
+
 impl TokenizeReason {
     fn from_const(v: c_int) -> Option<Self> {
         let v = match v {
@@ -198,7 +200,7 @@ fn panic_err_to_str(msg: &Box<dyn std::any::Any + Send>) -> &str {
     if let Some(msg) = msg.downcast_ref::<String>() {
         msg.as_str()
     } else if let Some(msg) = msg.downcast_ref::<&'static str>() {
-        *msg
+        msg
     } else {
         "<non-string panic reason>"
     }

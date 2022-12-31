@@ -88,16 +88,16 @@ fn test_search_notes() -> DatabaseResult<()> {
 #[test]
 fn test_search_chinese_notes() -> DatabaseResult<()> {
     let db = TestDatabase::temp();
-    db.replace_note(
-        &Note::new(None, "我是中国人".to_string(), "中文测试".to_string()),
-        UpdateSource::LocalEdit,
-    )?;
+    let note = Note::new(None, "我是中国人".to_string(), "中文测试".to_string());
+    db.replace_note(&note, UpdateSource::LocalEdit)?;
     db.rebuild_fts()?;
+    let notes = db.search_notes("中国")?;
+    assert_eq!(1, notes.len());
+    let notes = db.search_notes("我")?;
+    assert_eq!(1, notes.len());
+    let notes = db.search_notes("国人")?;
+    assert_eq!(0, notes.len());
     let notes = db.search_notes("测试")?;
-    println!("notes: {:?}", notes);
-    use jieba_rs::Jieba;
-    let jieba = Jieba::new();
-    let words = jieba.cut("我是中国人", false);
-    println!("words: {:?}", words);
+    assert_eq!(1, notes.len());
     Ok(())
 }

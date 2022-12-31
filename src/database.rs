@@ -282,7 +282,7 @@ impl Database {
         Ok(notes_fts::table
             .select((notes_fts::id, notes_fts::title, notes_fts::body))
             .filter(diesel::dsl::sql::<diesel::sql_types::Bool>(&format!(
-                "notes_fts MATCH '{}'",
+                "notes_fts MATCH '{}' ORDER BY bm25(notes_fts)",
                 search_term
             )))
             .load(&mut conn)?)
