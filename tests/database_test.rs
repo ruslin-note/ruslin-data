@@ -93,7 +93,7 @@ fn test_search_chinese_notes() -> DatabaseResult<()> {
         UpdateSource::LocalEdit,
     )?;
     db.rebuild_fts()?;
-    let notes = db.search_notes("我")?;
+    let notes = db.search_notes("测试")?;
     println!("notes: {:?}", notes);
     use jieba_rs::Jieba;
     let jieba = Jieba::new();

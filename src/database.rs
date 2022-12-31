@@ -1,5 +1,7 @@
 mod connection_options;
 mod error;
+mod jieba_tokenizer;
+mod sqlite3_fts5;
 
 pub use error::DatabaseError;
 
