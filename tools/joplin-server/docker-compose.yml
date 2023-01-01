@@ -11,3 +11,4 @@ services:
             - APP_PORT=22300
             - APP_BASE_URL=http://localhost:22300
             - JOPLIN_IS_TESTING=1
+            - MAX_TIME_DRIFT=0
