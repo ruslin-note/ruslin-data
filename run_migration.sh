@@ -2,6 +2,6 @@
 
 set -e
 
-# rm -rf database.sqlite
+rm -rf database.sqlite
 diesel migration run --database-url=database.sqlite
 cargo fmt

@@ -165,7 +165,7 @@ impl PartialEq for Note {
 
 impl SerializeForSync for Note {
     fn serialize(&self) -> ForSyncSerializer {
-        let mut ser = ForSyncSerializer::new(&self.title, Some(&self.body));
+        let mut ser = ForSyncSerializer::new(Some(&self.title), Some(&self.body));
         ser.serialize_str("id", self.id.as_str());
         ser.serialize_opt_str("parent_id", self.parent_id.as_deref());
         ser.serialize_str("title", &self.title);

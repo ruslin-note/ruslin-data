@@ -28,6 +28,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    note_tags (id) {
+        id -> Text,
+        note_id -> Text,
+        tag_id -> Text,
+        created_time -> BigInt,
+        updated_time -> BigInt,
+        user_created_time -> BigInt,
+        user_updated_time -> BigInt,
+        encryption_cipher_text -> Text,
+        encryption_applied -> Bool,
+        is_shared -> Bool,
+    }
+}
+
+diesel::table! {
     notes (id) {
         id -> Text,
         parent_id -> Nullable<Text>,
@@ -61,6 +76,27 @@ diesel::table! {
 }
 
 diesel::table! {
+    resources (id) {
+        id -> Text,
+        title -> Text,
+        mime -> Text,
+        filename -> Text,
+        created_time -> BigInt,
+        updated_time -> BigInt,
+        user_created_time -> BigInt,
+        user_updated_time -> BigInt,
+        file_extension -> Text,
+        encryption_cipher_text -> Text,
+        encryption_applied -> Bool,
+        encryption_blob_encrypted -> Bool,
+        size -> Integer,
+        is_shared -> Bool,
+        share_id -> Text,
+        master_key_id -> Text,
+    }
+}
+
+diesel::table! {
     settings (key) {
         key -> Text,
         value -> Text,
@@ -82,4 +118,28 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(deleted_items, folders, notes, settings, sync_items,);
+diesel::table! {
+    tags (id) {
+        id -> Text,
+        title -> Text,
+        created_time -> BigInt,
+        updated_time -> BigInt,
+        user_created_time -> BigInt,
+        user_updated_time -> BigInt,
+        encryption_cipher_text -> Text,
+        encryption_applied -> Bool,
+        is_shared -> Bool,
+        parent_id -> Nullable<Text>,
+    }
+}
+
+diesel::allow_tables_to_appear_in_same_query!(
+    deleted_items,
+    folders,
+    note_tags,
+    notes,
+    resources,
+    settings,
+    sync_items,
+    tags,
+);

@@ -1,8 +1,6 @@
-use std::{collections::HashMap, str::FromStr};
-
-use crate::{DateTimeRFC333, DateTimeTimestamp, ModelType};
-
 use super::{SyncError, SyncResult};
+use crate::{DateTimeRFC333, DateTimeTimestamp, ModelType};
+use std::{collections::HashMap, str::FromStr};
 
 #[derive(Debug)]
 pub struct ForSyncDeserializer {
@@ -113,6 +111,14 @@ impl ForSyncDeserializer {
         })
     }
 
+    pub fn get_i32(&self, k: &str) -> SyncResult<i32> {
+        self.get_str(k).and_then(|s| {
+            s.parse::<i32>().map_err(|_| SyncError::DeserializeError {
+                key: k.to_string(),
+                val: self.get_opt_string(k).unwrap_or_default(),
+            })
+        })
+    }
     pub fn get_i64(&self, k: &str) -> SyncResult<i64> {
         self.get_str(k).and_then(|s| {
             s.parse::<i64>().map_err(|_| SyncError::DeserializeError {

@@ -39,7 +39,7 @@ impl FileApiDriver for FileApiDriverLocal {
     }
 
     fn request_repeat_count(&self) -> u32 {
-        todo!()
+        unimplemented!()
     }
 
     async fn stat(&self, path: &str) -> SyncResult<Option<Stat>> {
@@ -104,11 +104,11 @@ impl FileApiDriver for FileApiDriverLocal {
         _path: &str,
         _ctx: Option<&dyn SyncContext>,
     ) -> SyncResult<super::file_api_driver::DeltaList> {
-        todo!()
+        unimplemented!()
     }
 
     fn deserializer_delta_context(&self, _s: &str) -> SyncResult<Box<dyn SyncContext>> {
-        todo!()
+        unimplemented!()
     }
 
     async fn clear_root(&self, base_dir: &str) -> SyncResult<()> {
@@ -126,7 +126,7 @@ impl FileApiDriver for FileApiDriverLocal {
         _client_type: LockClientType,
         _client_id: &str,
     ) -> SyncResult<Lock> {
-        todo!()
+        unimplemented!()
     }
 
     async fn release_lock(
@@ -135,10 +135,10 @@ impl FileApiDriver for FileApiDriverLocal {
         _client_type: LockClientType,
         _client_id: &str,
     ) -> SyncResult<()> {
-        todo!()
+        unimplemented!()
     }
 
     async fn list_locks(&self) -> SyncResult<LockList> {
-        todo!()
+        unimplemented!()
     }
 }

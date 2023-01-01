@@ -7,9 +7,12 @@ pub trait SerializeForSync {
 pub struct ForSyncSerializer(String);
 
 impl ForSyncSerializer {
-    pub fn new(title: &str, body: Option<&str>) -> Self {
-        let mut s = title.trim_start().trim_end().to_string();
-        s.push('\n');
+    pub fn new(title: Option<&str>, body: Option<&str>) -> Self {
+        let mut s = String::new();
+        if let Some(title) = title {
+            s.push_str(title.trim_start().trim_end());
+            s.push('\n');
+        }
         if let Some(body) = body {
             s.push('\n');
             s.push_str(body);
@@ -25,16 +28,22 @@ impl ForSyncSerializer {
     pub fn into_string(self) -> String {
         self.0
     }
+
+    pub fn insert_next_line(&mut self) {
+        if !self.0.is_empty() {
+            self.0.push('\n');
+        }
+    }
 }
 
 impl ForSyncSerializer {
     pub fn serialize_str(&mut self, k: &str, v: &str) {
-        self.0.push('\n');
+        self.insert_next_line();
         self.0.push_str(&format!("{k}: {v}"));
     }
 
     pub fn serialize_datetime_rfc333(&mut self, k: &str, v: &DateTimeRFC333) {
-        self.0.push('\n');
+        self.insert_next_line();
         self.0.push_str(&format!("{k}: {}", v.as_string()));
     }
 
@@ -44,26 +53,28 @@ impl ForSyncSerializer {
     }
 
     pub fn serialize_f64(&mut self, k: &str, v: f64) {
-        self.0.push('\n');
+        self.insert_next_line();
         self.0.push_str(&format!("{k}: {}", v));
     }
 
     pub fn serialize_i64(&mut self, k: &str, v: i64) {
-        self.0.push('\n');
+        self.insert_next_line();
+        self.0.push_str(&format!("{k}: {}", v));
+    }
+
+    pub fn serialize_i32(&mut self, k: &str, v: i32) {
+        self.insert_next_line();
         self.0.push_str(&format!("{k}: {}", v));
     }
 
     pub fn serialize_bool(&mut self, k: &str, v: bool) {
-        self.0.push('\n');
-        let v = match v {
-            true => 1,
-            false => 0,
-        };
+        self.insert_next_line();
+        let v = v as i32;
         self.0.push_str(&format!("{k}: {v}"));
     }
 
     pub fn serialize_opt_str(&mut self, k: &str, v: Option<&str>) {
-        self.0.push('\n');
+        self.insert_next_line();
         match v {
             Some(v) => {
                 self.0.push_str(&format!("{k}: {v}"));
@@ -75,7 +86,7 @@ impl ForSyncSerializer {
     }
 
     pub fn serialize_type(&mut self, k: &str, v: ModelType) {
-        self.0.push('\n');
+        self.insert_next_line();
         self.0.push_str(&format!("{k}: {}", v as i32));
     }
 }

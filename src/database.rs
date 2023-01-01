@@ -24,7 +24,7 @@ use crate::{
     new_id,
     sync::{ForSyncSerializer, SerializeForSync},
     AbbrNote, DateTimeTimestamp, DeletedItem, ModelType, NewDeletedItem, NewSetting, NewSyncItem,
-    Note, NoteFts, Setting, SyncItem,
+    Note, NoteFts, NoteTag, Resource, Setting, SyncItem, Tag,
 };
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
@@ -409,6 +409,13 @@ impl Database {
             ModelType::Folder => self
                 .load_folder(&sync_item.item_id)
                 .map(|folder| folder.serialize()),
+            ModelType::Resource => self
+                .load_resource(&sync_item.item_id)
+                .map(|x| x.serialize()),
+            ModelType::Tag => self.load_tag(&sync_item.item_id).map(|x| x.serialize()),
+            ModelType::NoteTag => self
+                .load_note_tag(&sync_item.item_id)
+                .map(|x| x.serialize()),
             ModelType::Unsupported => {
                 panic!("cannot load unsupported type");
             }
@@ -499,5 +506,164 @@ impl Database {
                 Ok(id)
             }
         }
+    }
+}
+
+impl Database {
+    pub fn load_tag(&self, id: &str) -> DatabaseResult<Tag> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::tags;
+        Ok(tags::table
+            .filter(tags::id.eq(id))
+            .select((
+                tags::id,
+                tags::title,
+                tags::created_time,
+                tags::updated_time,
+                tags::user_created_time,
+                tags::user_updated_time,
+                tags::encryption_cipher_text,
+                tags::encryption_applied,
+                tags::is_shared,
+                tags::parent_id,
+            ))
+            .first(&mut conn)?)
+    }
+
+    pub fn replace_tag(&self, tag: &Tag, update_source: UpdateSource) -> DatabaseResult<()> {
+        let tag = match update_source {
+            UpdateSource::RemoteSync => tag.clone(),
+            UpdateSource::LocalEdit => tag.updated(),
+        };
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::tags;
+        diesel::replace_into(tags::table)
+            .values(&tag)
+            .execute(&mut conn)?;
+        self.replace_sync_item(ModelType::Tag, tag.id.as_str(), update_source)?;
+        Ok(())
+    }
+
+    pub fn delete_tag(&self, id: &str, update_source: UpdateSource) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::tags;
+        self.delete_sync_item(id)?;
+        diesel::delete(tags::table)
+            .filter(tags::id.eq(id))
+            .execute(&mut conn)?;
+        if update_source.is_local_edit() {
+            self.insert_deleted_item(ModelType::Tag, id)?;
+        }
+        Ok(())
+    }
+
+    pub fn load_note_tag(&self, id: &str) -> DatabaseResult<NoteTag> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::note_tags;
+        Ok(note_tags::table
+            .filter(note_tags::id.eq(id))
+            .select((
+                note_tags::id,
+                note_tags::note_id,
+                note_tags::tag_id,
+                note_tags::created_time,
+                note_tags::updated_time,
+                note_tags::user_created_time,
+                note_tags::user_updated_time,
+                note_tags::encryption_cipher_text,
+                note_tags::encryption_applied,
+                note_tags::is_shared,
+            ))
+            .first(&mut conn)?)
+    }
+
+    pub fn replace_note_tag(
+        &self,
+        note_tag: &NoteTag,
+        update_source: UpdateSource,
+    ) -> DatabaseResult<()> {
+        let note_tag = match update_source {
+            UpdateSource::RemoteSync => note_tag.clone(),
+            UpdateSource::LocalEdit => note_tag.updated(),
+        };
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::note_tags;
+        diesel::replace_into(note_tags::table)
+            .values(&note_tag)
+            .execute(&mut conn)?;
+        self.replace_sync_item(ModelType::NoteTag, note_tag.id.as_str(), update_source)?;
+        Ok(())
+    }
+
+    pub fn delete_note_tag(&self, id: &str, update_source: UpdateSource) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::note_tags;
+        self.delete_sync_item(id)?;
+        diesel::delete(note_tags::table)
+            .filter(note_tags::id.eq(id))
+            .execute(&mut conn)?;
+        if update_source.is_local_edit() {
+            self.insert_deleted_item(ModelType::NoteTag, id)?;
+        }
+        Ok(())
+    }
+}
+
+impl Database {
+    pub fn load_resource(&self, id: &str) -> DatabaseResult<Resource> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::resources;
+        Ok(resources::table
+            .filter(resources::id.eq(id))
+            .select((
+                resources::id,
+                resources::title,
+                resources::mime,
+                resources::filename,
+                resources::created_time,
+                resources::updated_time,
+                resources::user_created_time,
+                resources::user_updated_time,
+                resources::file_extension,
+                resources::encryption_cipher_text,
+                resources::encryption_applied,
+                resources::encryption_blob_encrypted,
+                resources::size,
+                resources::is_shared,
+                resources::share_id,
+                resources::master_key_id,
+            ))
+            .first(&mut conn)?)
+    }
+
+    pub fn replace_resource(
+        &self,
+        resource: &Resource,
+        update_source: UpdateSource,
+    ) -> DatabaseResult<()> {
+        let resource = match update_source {
+            UpdateSource::RemoteSync => resource.clone(),
+            UpdateSource::LocalEdit => resource.updated(),
+        };
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::resources;
+        diesel::replace_into(resources::table)
+            .values(&resource)
+            .execute(&mut conn)?;
+        self.replace_sync_item(ModelType::Resource, resource.id.as_str(), update_source)?;
+        Ok(())
+    }
+
+    pub fn delete_resource(&self, id: &str, update_source: UpdateSource) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::resources;
+        self.delete_sync_item(id)?;
+        diesel::delete(resources::table)
+            .filter(resources::id.eq(id))
+            .execute(&mut conn)?;
+        if update_source.is_local_edit() {
+            self.insert_deleted_item(ModelType::Resource, id)?;
+        }
+        Ok(())
     }
 }

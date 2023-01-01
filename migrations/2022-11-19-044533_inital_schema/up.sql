@@ -109,3 +109,52 @@ CREATE TABLE settings(
     `key` TEXT NOT NULL PRIMARY KEY,
     `value` TEXT NOT NULL
 );
+
+---
+
+CREATE TABLE tags (
+    id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL,
+    created_time BIGINT NOT NULL,
+    updated_time BIGINT NOT NULL,
+    user_created_time BIGINT NOT NULL DEFAULT 0,
+    user_updated_time BIGINT NOT NULL DEFAULT 0,
+    encryption_cipher_text TEXT NOT NULL DEFAULT "",
+    encryption_applied BOOLEAN NOT NULL DEFAULT FALSE,
+    is_shared BOOLEAN NOT NULL DEFAULT FALSE,
+    parent_id TEXT DEFAULT NULL
+);
+
+CREATE TABLE note_tags (
+    id TEXT PRIMARY KEY NOT NULL,
+    note_id TEXT NOT NULL,
+    tag_id TEXT NOT NULL,
+    created_time BIGINT NOT NULL,
+    updated_time BIGINT NOT NULL,
+    user_created_time BIGINT NOT NULL DEFAULT 0,
+    user_updated_time BIGINT NOT NULL DEFAULT 0,
+    encryption_cipher_text TEXT NOT NULL DEFAULT "",
+    encryption_applied BOOLEAN NOT NULL DEFAULT FALSE,
+    is_shared BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+---
+
+CREATE TABLE `resources`(
+    `id` TEXT PRIMARY KEY NOT NULL,
+    `title` TEXT NOT NULL DEFAULT "",
+    `mime` TEXT NOT NULL,
+    `filename` TEXT NOT NULL DEFAULT "",
+    `created_time` BIGINT NOT NULL,
+    `updated_time` BIGINT NOT NULL,
+    `user_created_time` BIGINT NOT NULL DEFAULT 0,
+    `user_updated_time` BIGINT NOT NULL DEFAULT 0,
+    `file_extension` TEXT NOT NULL DEFAULT "",
+    `encryption_cipher_text` TEXT NOT NULL DEFAULT "",
+    `encryption_applied` BOOLEAN NOT NULL DEFAULT FALSE,
+    `encryption_blob_encrypted` BOOLEAN NOT NULL DEFAULT FALSE,
+    `size` INT NOT NULL DEFAULT -1,
+    is_shared BOOLEAN NOT NULL DEFAULT FALSE,
+    share_id TEXT NOT NULL DEFAULT "",
+    master_key_id TEXT NOT NULL DEFAULT ""
+);

@@ -15,7 +15,8 @@ pub use serializer::{ForSyncSerializer, SerializeForSync};
 use tokio::{task::JoinSet, time::Instant};
 
 use crate::{
-    Database, DateTimeTimestamp, Folder, ModelType, Note, Setting, SyncItem, UpdateSource,
+    Database, DateTimeTimestamp, Folder, ModelType, Note, NoteTag, Resource, Setting, SyncItem,
+    Tag, UpdateSource,
 };
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -141,7 +142,14 @@ impl Synchronizer {
                             self.create_conflict_note(&local_note, Some(&remote_note))?;
                             self.write_remote_to_local(&remote_des)?;
                         }
-                        ModelType::Folder | ModelType::Unsupported => {
+                        ModelType::Resource => {
+                            // TODO: handle resource conflict
+                            self.write_remote_to_local(&remote_des)?;
+                        }
+                        ModelType::Tag
+                        | ModelType::NoteTag
+                        | ModelType::Folder
+                        | ModelType::Unsupported => {
                             // take the remote version
                             self.write_remote_to_local(&remote_des)?;
                         }
@@ -184,7 +192,14 @@ impl Synchronizer {
                         self.create_conflict_note(&local_note, None)?;
                         self.delete_local_by_sync(&item)?;
                     }
-                    ModelType::Folder | ModelType::Unsupported => {
+                    ModelType::Resource => {
+                        // TODO: handle conflict
+                        self.delete_local_by_sync(&item)?;
+                    }
+                    ModelType::Tag
+                    | ModelType::NoteTag
+                    | ModelType::Folder
+                    | ModelType::Unsupported => {
                         self.delete_local_by_sync(&item)?;
                     }
                 }
@@ -265,6 +280,7 @@ impl Synchronizer {
     }
 
     fn write_remote_to_local(&self, des: &ForSyncDeserializer) -> SyncResult<()> {
+        let update_source = UpdateSource::RemoteSync;
         match des.r#type {
             ModelType::Note => {
                 let note = Note::dserialize(des)?;
@@ -273,7 +289,7 @@ impl Synchronizer {
                     "pulling note {} to local",
                     note.get_title()
                 );
-                self.db.replace_note(&note, UpdateSource::RemoteSync)?;
+                self.db.replace_note(&note, update_source)?;
             }
             ModelType::Folder => {
                 let folder = Folder::dserialize(des)?;
@@ -282,7 +298,30 @@ impl Synchronizer {
                     "pulling folder {} to local",
                     folder.get_title()
                 );
-                self.db.replace_folder(&folder, UpdateSource::RemoteSync)?;
+                self.db.replace_folder(&folder, update_source)?;
+            }
+            ModelType::Resource => {
+                let resource = Resource::dserialize(des)?;
+                log::debug!(
+                    target: LOG_TARGET,
+                    "pulling resource {} to local",
+                    resource.title
+                );
+                self.db.replace_resource(&resource, update_source)?;
+            }
+            ModelType::Tag => {
+                let tag = Tag::dserialize(des)?;
+                log::debug!(target: LOG_TARGET, "pulling tag {} to local", tag.title);
+                self.db.replace_tag(&tag, update_source)?;
+            }
+            ModelType::NoteTag => {
+                let note_tag = NoteTag::dserialize(des)?;
+                log::debug!(
+                    target: LOG_TARGET,
+                    "pulling note-tag {} to local",
+                    note_tag.id
+                );
+                self.db.replace_note_tag(&note_tag, update_source)?;
             }
             ModelType::Unsupported => {
                 log::warn!("skip unsupported type {:?}", des);
@@ -298,13 +337,14 @@ impl Synchronizer {
             sync_item.item_id,
             sync_item.item_type
         );
+        let id = &sync_item.item_id;
+        let update_source = UpdateSource::RemoteSync;
         match sync_item.item_type {
-            ModelType::Note => self
-                .db
-                .delete_note(&sync_item.item_id, UpdateSource::RemoteSync)?,
-            ModelType::Folder => self
-                .db
-                .delete_folder(&sync_item.item_id, UpdateSource::RemoteSync)?,
+            ModelType::Note => self.db.delete_note(id, update_source)?,
+            ModelType::Folder => self.db.delete_folder(id, update_source)?,
+            ModelType::Resource => self.db.delete_resource(id, update_source)?,
+            ModelType::Tag => self.db.delete_tag(id, update_source)?,
+            ModelType::NoteTag => self.db.delete_note_tag(id, update_source)?,
             ModelType::Unsupported => {
                 log::warn!("skip unsupported type {}", sync_item.item_id);
             }

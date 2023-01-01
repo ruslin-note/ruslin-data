@@ -2,8 +2,10 @@ mod date_time;
 mod deleted_item;
 mod folder;
 mod note;
+mod resource;
 mod setting;
 mod sync_item;
+mod tag;
 
 pub use date_time::*;
 pub use deleted_item::{DeletedItem, NewDeletedItem};
@@ -17,9 +19,11 @@ use diesel::{
 };
 pub use folder::Folder;
 pub use note::{notes_fts, AbbrNote, Note, NoteFts};
+pub use resource::Resource;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 pub use setting::{NewSetting, Setting};
 pub use sync_item::{NewSyncItem, SyncItem, SyncTarget};
+pub use tag::{NoteTag, Tag};
 
 #[derive(
     Eq,
@@ -39,9 +43,9 @@ pub enum ModelType {
     Note = 1,
     Folder = 2,
     // Setting = 3,
-    // Resource = 4,
-    // Tag = 5,
-    // NoteTag = 6,
+    Resource = 4,
+    Tag = 5,
+    NoteTag = 6,
     // Search = 7,
     // Alarm = 8,
     // MasterKey = 9,
@@ -60,6 +64,9 @@ impl From<i32> for ModelType {
         match val {
             1 => ModelType::Note,
             2 => ModelType::Folder,
+            4 => ModelType::Resource,
+            5 => ModelType::Tag,
+            6 => ModelType::NoteTag,
             _ => ModelType::Unsupported,
         }
     }
@@ -70,6 +77,9 @@ impl FromSql<Integer, Sqlite> for ModelType {
         match i32::from_sql(bytes)? {
             1 => Ok(ModelType::Note),
             2 => Ok(ModelType::Folder),
+            4 => Ok(ModelType::Resource),
+            5 => Ok(ModelType::Tag),
+            6 => Ok(ModelType::NoteTag),
             x => Err(format!("Unrecognized variant {}", x).into()),
         }
     }

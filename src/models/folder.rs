@@ -126,7 +126,7 @@ impl PartialEq for Folder {
 
 impl SerializeForSync for Folder {
     fn serialize(&self) -> ForSyncSerializer {
-        let mut ser = ForSyncSerializer::new(&self.title, None);
+        let mut ser = ForSyncSerializer::new(Some(&self.title), None);
         ser.serialize_str("id", self.id.as_str());
         ser.serialize_datetime("created_time", self.created_time);
         ser.serialize_datetime("updated_time", self.updated_time);
