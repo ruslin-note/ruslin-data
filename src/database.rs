@@ -24,7 +24,7 @@ use crate::{
     new_id,
     sync::{ForSyncSerializer, SerializeForSync},
     AbbrNote, DateTimeTimestamp, DeletedItem, ModelType, NewDeletedItem, NewSetting, NewSyncItem,
-    Note, NoteFts, NoteTag, Resource, Setting, SyncItem, Tag,
+    Note, NoteFts, NoteTag, Resource, Setting, Status, SyncItem, Tag,
 };
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
@@ -146,6 +146,12 @@ impl Database {
             self.insert_deleted_item(ModelType::Folder, id)?;
         }
         Ok(())
+    }
+
+    pub fn folder_count(&self) -> DatabaseResult<i64> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::folders;
+        Ok(folders::table.count().get_result(&mut conn)?)
     }
 }
 
@@ -269,6 +275,12 @@ impl Database {
             self.insert_deleted_item(ModelType::Note, id)?;
         }
         Ok(())
+    }
+
+    pub fn note_count(&self) -> DatabaseResult<i64> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::notes;
+        Ok(notes::table.count().get_result(&mut conn)?)
     }
 
     fn delete_notes_by_folder_id(&self, folder_id: Option<&str>) -> DatabaseResult<()> {
@@ -557,6 +569,12 @@ impl Database {
         Ok(())
     }
 
+    pub fn tag_count(&self) -> DatabaseResult<i64> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::tags;
+        Ok(tags::table.count().get_result(&mut conn)?)
+    }
+
     pub fn load_note_tag(&self, id: &str) -> DatabaseResult<NoteTag> {
         let mut conn = self.connection_pool.get()?;
         use crate::schema::note_tags;
@@ -606,6 +624,12 @@ impl Database {
             self.insert_deleted_item(ModelType::NoteTag, id)?;
         }
         Ok(())
+    }
+
+    pub fn note_tag_count(&self) -> DatabaseResult<i64> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::note_tags;
+        Ok(note_tags::table.count().get_result(&mut conn)?)
     }
 }
 
@@ -665,5 +689,23 @@ impl Database {
             self.insert_deleted_item(ModelType::Resource, id)?;
         }
         Ok(())
+    }
+
+    pub fn resource_count(&self) -> DatabaseResult<i64> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::resources;
+        Ok(resources::table.count().get_result(&mut conn)?)
+    }
+}
+
+impl Database {
+    pub fn status(&self) -> DatabaseResult<Status> {
+        Ok(Status {
+            note_count: self.note_count()?,
+            folder_count: self.folder_count()?,
+            resource_count: self.resource_count()?,
+            tag_count: self.tag_count()?,
+            note_tag_count: self.note_tag_count()?,
+        })
     }
 }

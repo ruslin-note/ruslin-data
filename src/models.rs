@@ -4,6 +4,7 @@ mod folder;
 mod note;
 mod resource;
 mod setting;
+mod status;
 mod sync_item;
 mod tag;
 
@@ -22,6 +23,7 @@ pub use note::{notes_fts, AbbrNote, Note, NoteFts};
 pub use resource::Resource;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 pub use setting::{NewSetting, Setting};
+pub use status::Status;
 pub use sync_item::{NewSyncItem, SyncItem, SyncTarget};
 pub use tag::{NoteTag, Tag};
 
