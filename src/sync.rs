@@ -39,6 +39,17 @@ impl Debug for SyncConfig {
 
 const LOG_TARGET: &str = "Synchronizer";
 
+#[derive(Debug, Default)]
+pub struct SyncInfo {
+    pub delete_remote_count: i32,
+    pub conflict_note_count: i32,
+    pub other_conflict_count: i32,
+    pub upload_count: i32,
+    pub delete_count: i32,
+    pub pull_count: i32,
+    pub elapsed_time: f64,
+}
+
 pub struct Synchronizer {
     db: Arc<Database>,
     file_api_driver: Arc<Box<dyn FileApiDriver>>,
@@ -62,12 +73,14 @@ impl Synchronizer {
         }
     }
 
-    pub async fn start(&self) -> SyncResult<()> {
+    pub async fn start(&self) -> SyncResult<SyncInfo> {
         let now = Instant::now();
-        self.delete_remote().await?;
-        self.upload().await?;
-        self.delta().await?;
+        let mut sync_info = SyncInfo::default();
+        self.delete_remote(&mut sync_info).await?;
+        self.upload(&mut sync_info).await?;
+        self.delta(&mut sync_info).await?;
         let elapsed = now.elapsed();
+        sync_info.elapsed_time = elapsed.as_secs_f64();
         let elapsed = if elapsed.as_secs() >= 1 {
             format!("{}s", elapsed.as_secs_f64())
         } else {
@@ -79,10 +92,10 @@ impl Synchronizer {
             DateTimeTimestamp::now().format_ymd_hms(),
             elapsed
         );
-        Ok(())
+        Ok(sync_info)
     }
 
-    async fn delete_remote(&self) -> SyncResult<()> {
+    async fn delete_remote(&self, sync_info: &mut SyncInfo) -> SyncResult<()> {
         log::info!(
             target: LOG_TARGET,
             "starting the delete remote content task"
@@ -113,11 +126,12 @@ impl Synchronizer {
                 deleted_item.item_type
             );
             self.db.delete_deleted_item(deleted_item)?;
+            sync_info.delete_remote_count += 1;
         }
         Ok(())
     }
 
-    async fn upload(&self) -> SyncResult<()> {
+    async fn upload(&self, sync_info: &mut SyncInfo) -> SyncResult<()> {
         log::info!(target: LOG_TARGET, "starting the upload local content task");
         let need_upload_sync_items = self.db.load_need_upload_sync_items()?;
         for item in need_upload_sync_items {
@@ -141,10 +155,12 @@ impl Synchronizer {
                             let remote_note = Note::dserialize(&remote_des)?;
                             self.create_conflict_note(&local_note, Some(&remote_note))?;
                             self.write_remote_to_local(&remote_des)?;
+                            sync_info.conflict_note_count += 1;
                         }
                         ModelType::Resource => {
                             // TODO: handle resource conflict
                             self.write_remote_to_local(&remote_des)?;
+                            sync_info.other_conflict_count += 1;
                         }
                         ModelType::Tag
                         | ModelType::NoteTag
@@ -152,6 +168,7 @@ impl Synchronizer {
                         | ModelType::Unsupported => {
                             // take the remote version
                             self.write_remote_to_local(&remote_des)?;
+                            sync_info.other_conflict_count += 1;
                         }
                     }
                 } else {
@@ -166,6 +183,7 @@ impl Synchronizer {
                     self.file_api_driver
                         .put(&item.filepath(), upload_content.as_str())
                         .await?;
+                    sync_info.upload_count += 1;
                 }
             } else if item.never_synced() {
                 log::debug!(
@@ -179,6 +197,7 @@ impl Synchronizer {
                 self.file_api_driver
                     .put(&item.filepath(), upload_content.as_str())
                     .await?;
+                sync_info.upload_count += 1;
             } else {
                 // remote == None && not first sync -> conflict. remote has beed deleted, but local has changes
                 log::warn!(
@@ -191,16 +210,19 @@ impl Synchronizer {
                         let local_note = self.db.load_note(&item.item_id)?;
                         self.create_conflict_note(&local_note, None)?;
                         self.delete_local_by_sync(&item)?;
+                        sync_info.conflict_note_count += 1;
                     }
                     ModelType::Resource => {
                         // TODO: handle conflict
                         self.delete_local_by_sync(&item)?;
+                        sync_info.other_conflict_count += 1;
                     }
                     ModelType::Tag
                     | ModelType::NoteTag
                     | ModelType::Folder
                     | ModelType::Unsupported => {
                         self.delete_local_by_sync(&item)?;
+                        sync_info.other_conflict_count += 1;
                     }
                 }
             }
@@ -208,7 +230,7 @@ impl Synchronizer {
         Ok(())
     }
 
-    async fn delta(&self) -> SyncResult<()> {
+    async fn delta(&self, sync_info: &mut SyncInfo) -> SyncResult<()> {
         let mut context = if let Some(delta_context_setting) =
             self.db.get_setting_value(Setting::FILE_API_DELTA_CONTEXT)?
         {
@@ -248,6 +270,7 @@ impl Synchronizer {
                 if remote_item.is_deleted {
                     if let Some(local_sync_item) = local_sync_item {
                         self.delete_local_by_sync(local_sync_item)?;
+                        sync_info.delete_count += 1;
                     }
                 } else {
                     if let Some(local_sync_item) = local_sync_item {
@@ -259,6 +282,7 @@ impl Synchronizer {
                     let content = handle.await??;
                     let des = ForSyncDeserializer::from_str(&content)?;
                     self.write_remote_to_local(&des)?;
+                    sync_info.pull_count += 1;
                 }
             }
             context = list_result.context;

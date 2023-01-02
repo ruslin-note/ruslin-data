@@ -10,7 +10,7 @@ pub use models::*;
 use parking_lot::RwLock;
 use sync::{
     remote_api::JoplinServerAPI, FileApiDriver, FileApiDriverJoplinServer, SyncConfig, SyncError,
-    SyncResult, Synchronizer,
+    SyncInfo, SyncResult, Synchronizer,
 };
 
 #[derive(Debug)]
@@ -46,7 +46,7 @@ impl RuslinData {
         Ok(file_api_driver)
     }
 
-    pub async fn sync(&self) -> SyncResult<()> {
+    pub async fn sync(&self) -> SyncResult<SyncInfo> {
         let file_api_driver = self.get_file_api_driver().await?;
         let synchronizer = Synchronizer::new(self.db.clone(), file_api_driver);
         synchronizer.start().await
