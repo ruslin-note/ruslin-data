@@ -9,8 +9,8 @@ pub type SyncResult<T> = std::result::Result<T, SyncError>;
 pub enum SyncError {
     #[error("io error: {0}")]
     IOError(#[from] io::Error),
-    #[error("file not exists")]
-    FileNotExists,
+    #[error("file not exists: {0}")]
+    FileNotExists(String),
     #[error("cannot handle conflitc for two different notes")]
     HandleConflictForDiffNote,
     #[error("unknown")]
@@ -31,6 +31,8 @@ pub enum SyncError {
     SerdeJsonError(#[from] serde_json::Error),
     #[error("sync config not exists")]
     SyncConfigNotExists,
+    #[error("not supported sync target info {0}")]
+    NotSupportedSyncTargetInfo(String),
 }
 
 impl serde::ser::Error for SyncError {

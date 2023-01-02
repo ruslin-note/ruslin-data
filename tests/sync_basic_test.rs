@@ -20,7 +20,7 @@ impl TestClient {
         let data_dir = tempfile::TempDir::new().unwrap();
         let ruslin_data = RuslinData::new(data_dir.path())?;
         ruslin_data.save_sync_config(sync_config).await?;
-        ruslin_data.clear_remote().await?;
+        // ruslin_data.clear_remote().await?;
         Ok(Self(data_dir, ruslin_data))
     }
 }

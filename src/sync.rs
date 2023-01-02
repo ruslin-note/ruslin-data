@@ -4,6 +4,7 @@ mod file_api;
 pub mod lock_handler;
 pub mod remote_api;
 mod serializer;
+mod sync_target_info;
 
 use std::{fmt::Debug, str::FromStr, sync::Arc};
 
@@ -18,6 +19,8 @@ use crate::{
     Database, DateTimeTimestamp, Folder, ModelType, Note, NoteTag, Resource, Setting, SyncItem,
     Tag, UpdateSource,
 };
+
+use self::sync_target_info::SyncTargetInfo;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum SyncConfig {
@@ -70,6 +73,33 @@ impl Synchronizer {
             db,
             file_api_driver: file_api_driver.clone(),
             // lock_handler: LockHandler::new(file_api_driver),
+        }
+    }
+
+    pub async fn check_target_info_support(&self) -> SyncResult<()> {
+        let info_result = self.file_api_driver.get("info.json").await;
+        match info_result {
+            Ok(r) => {
+                let sync_target_info: SyncTargetInfo = serde_json::from_str(&r)?;
+                if sync_target_info.is_supported() {
+                    Ok(())
+                } else {
+                    Err(SyncError::NotSupportedSyncTargetInfo(r))
+                }
+            }
+            Err(e) => match e {
+                SyncError::FileNotExists(_) => {
+                    log::info!(target: LOG_TARGET, "creating info.json");
+                    self.file_api_driver
+                        .put(
+                            "info.json",
+                            &serde_json::to_string(&SyncTargetInfo::new_support_info())?,
+                        )
+                        .await?;
+                    Ok(())
+                }
+                _ => Err(e),
+            },
         }
     }
 

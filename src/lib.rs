@@ -49,6 +49,7 @@ impl RuslinData {
     pub async fn sync(&self) -> SyncResult<SyncInfo> {
         let file_api_driver = self.get_file_api_driver().await?;
         let synchronizer = Synchronizer::new(self.db.clone(), file_api_driver);
+        synchronizer.check_target_info_support().await?;
         synchronizer.start().await
     }
 
@@ -78,8 +79,10 @@ impl RuslinData {
                 password,
             } => {
                 let api = JoplinServerAPI::login(host, email, password).await?;
-                let file_api = FileApiDriverJoplinServer::new(api);
-                file_api.check_config().await?;
+                let file_api_driver = Box::new(FileApiDriverJoplinServer::new(api));
+                file_api_driver.check_config().await?;
+                let synchronizer = Synchronizer::new(self.db.clone(), file_api_driver);
+                synchronizer.check_target_info_support().await?;
             }
         };
         self.db.replace_setting(

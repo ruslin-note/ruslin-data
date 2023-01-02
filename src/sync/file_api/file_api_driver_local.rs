@@ -87,10 +87,10 @@ impl FileApiDriver for FileApiDriverLocal {
         unimplemented!()
     }
 
-    async fn delete(&self, path: &str) -> SyncResult<()> {
-        let path = Path::new(path);
+    async fn delete(&self, path_s: &str) -> SyncResult<()> {
+        let path = Path::new(path_s);
         if !path.exists() {
-            return Err(SyncError::FileNotExists);
+            return Err(SyncError::FileNotExists(path_s.to_string()));
         }
         Ok(fs::remove_file(path)?)
     }

@@ -25,6 +25,14 @@ pub enum JoplinServerError {
 
 impl From<JoplinServerError> for SyncError {
     fn from(err: JoplinServerError) -> Self {
+        match &err {
+            JoplinServerError::ResError { text, status_code } => {
+                if *status_code == StatusCode::NOT_FOUND {
+                    return Self::FileNotExists(text.to_string());
+                }
+            }
+            JoplinServerError::ResInnerError(_) => (),
+        };
         Self::APIError(Box::new(err))
     }
 }
@@ -336,6 +344,7 @@ pub mod test_api {
         Basic1,
         Basic2,
         Conflict1,
+        SyncTargetInfo,
     }
 
     impl TestSyncClient {
