@@ -378,7 +378,7 @@ impl Synchronizer {
                 self.db.replace_note_tag(&note_tag, update_source)?;
             }
             ModelType::Unsupported => {
-                log::warn!("skip unsupported type {:?}", des);
+                log::warn!("skip unsupported type: {}", des.id);
             }
         }
         Ok(())
