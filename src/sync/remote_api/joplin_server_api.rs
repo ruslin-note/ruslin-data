@@ -14,12 +14,12 @@ pub type JoplinServerResult<T> = Result<T, JoplinServerError>;
 
 #[derive(Error, Debug)]
 pub enum JoplinServerError {
-    #[error("response error")]
+    #[error("response error {status_code} {text}")]
     ResError {
         text: String,
         status_code: StatusCode,
     },
-    #[error("response inner error")]
+    #[error("response inner error {0}")]
     ResInnerError(#[from] ResError),
 }
 
