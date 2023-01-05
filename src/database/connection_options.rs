@@ -1,4 +1,4 @@
-use chrono::Duration;
+use time::Duration;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
@@ -21,7 +21,7 @@ impl ConnectionOptions {
         if let Some(duration) = self.busy_timeout {
             conn.batch_execute(&format!(
                 "PRAGMA busy_timeout = {};",
-                duration.num_milliseconds()
+                duration.whole_milliseconds()
             ))?;
         }
         Ok(())

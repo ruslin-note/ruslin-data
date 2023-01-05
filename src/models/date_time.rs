@@ -1,6 +1,5 @@
-use std::fmt::Debug;
-
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
+use time::OffsetDateTime;
 use diesel::{
     backend::RawValue,
     deserialize::{self, FromSql},
@@ -27,7 +26,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 #[diesel(sql_type = BigInt)]
 pub struct DateTimeTimestamp(i64);
 
-impl Debug for DateTimeTimestamp {
+impl std::fmt::Debug for DateTimeTimestamp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("DateTimeTimestamp")
             .field(&self.format_ymd_hms())
@@ -37,7 +36,7 @@ impl Debug for DateTimeTimestamp {
 
 impl DateTimeTimestamp {
     pub fn now() -> Self {
-        Self(Utc::now().naive_utc().timestamp_millis())
+        Self(OffsetDateTime::now_utc().unix_timestamp())
     }
 
     pub fn zero() -> Self {
@@ -53,11 +52,14 @@ impl DateTimeTimestamp {
     }
 
     pub fn format_ymd_hms(&self) -> String {
-        let utc = NaiveDateTime::from_timestamp_millis(self.0).expect("format_ymd_hms error");
-        chrono::Local
-            .from_utc_datetime(&utc)
-            .format("%Y-%m-%d %H:%M:%S")
-            .to_string()
+        // from_timestamp_millis
+        let utc = OffsetDateTime::from_unix_timestamp(OffsetDateTime::from_unix_timestamp_nanos(self.0 / 1000)).expect("format_ymd_hms error");
+        // chrono::Local
+        //     .from_utc_datetime(&utc)
+        //     .format("%Y-%m-%d %H:%M:%S")
+        //     .to_string()
+        use time::macros::format_description;
+        utc.format(format_description!("[hour]:[minute]:[second]")).expect("format failed")
     }
 }
 
@@ -163,5 +165,11 @@ mod tests {
         let dt_rfc333: DateTimeRFC333 = dt_timestamp.into();
         let dt_timestamp_2: DateTimeTimestamp = dt_rfc333.into();
         assert_eq!(dt_timestamp, dt_timestamp_2);
+    }
+
+    #[test]
+    fn test_timestamp_format() {
+        let dt_timestamp = DateTimeTimestamp::from_timestamp_millis(1668922083344);
+        assert_eq!("2022-11-20 13:28:03", &dt_timestamp.format_ymd_hms());
     }
 }
