@@ -145,7 +145,7 @@ fn test_search_chinese_notes() -> DatabaseResult<()> {
     db.rebuild_fts()?;
     let notes = db.search_notes("中国", Some(SearchBodyOption::Highlight))?;
     assert_eq!(1, notes.len());
-    assert_eq!("我是<mark>中国</mark>人", notes[0].title);
+    assert_eq!("我是<b>中国</b>人", notes[0].title);
     let notes = db.search_notes("中国", None)?;
     assert_eq!(1, notes.len());
     assert_eq!("我是中国人", notes[0].title);
@@ -155,7 +155,7 @@ fn test_search_chinese_notes() -> DatabaseResult<()> {
     let notes = db.search_notes("国人", Some(SearchBodyOption::Highlight))?;
     assert_eq!(0, notes.len());
     let notes = db.search_notes("测试", Some(SearchBodyOption::Highlight))?;
-    assert_eq!("中文<mark>测试</mark>", notes[0].body);
+    assert_eq!("中文<b>测试</b>", notes[0].body);
     assert_eq!(1, notes.len());
     Ok(())
 }

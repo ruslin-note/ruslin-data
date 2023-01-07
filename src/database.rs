@@ -364,14 +364,14 @@ impl Database {
         if let Some(option) = option {
             let auxiliary_function = match option {
                 SearchBodyOption::Highlight => {
-                    "highlight(`notes_fts`, 1, '<mark>', '</mark>')".to_string()
+                    "highlight(`notes_fts`, 1, '<b>', '</b>')".to_string()
                 }
                 SearchBodyOption::Snippet { max_tokens } => {
                     assert!(max_tokens <= 64);
-                    format!("snippet(`notes_fts`, 1, '<mark>', '</mark>', '…', {max_tokens})")
+                    format!("snippet(`notes_fts`, 1, '<b>', '</b>', '…', {max_tokens})")
                 }
             };
-            let query = format!("SELECT `notes_fts`.`id`, highlight(`notes_fts`, 0, '<mark>', '</mark>') as `title`, {auxiliary_function} as `body` FROM `notes_fts` WHERE notes_fts MATCH '{search_term}' ORDER BY bm25(notes_fts);");
+            let query = format!("SELECT `notes_fts`.`id`, highlight(`notes_fts`, 0, '<b>', '</b>') as `title`, {auxiliary_function} as `body` FROM `notes_fts` WHERE notes_fts MATCH '{search_term}' ORDER BY bm25(notes_fts);");
             Ok(sql_query(query).load(&mut conn)?)
         } else {
             // let body = highlight(notes_fts_table, 2, "<b>", "</b>");
