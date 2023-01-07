@@ -78,13 +78,17 @@ pub struct Note {
 }
 
 impl Note {
-    pub fn new(parent_id: Option<String>, title: String, body: String) -> Self {
+    pub fn new(
+        parent_id: Option<String>,
+        title: impl Into<String>,
+        body: impl Into<String>,
+    ) -> Self {
         let dt = DateTimeTimestamp::now();
         Self {
             id: new_id(),
             parent_id,
-            title,
-            body,
+            title: title.into(),
+            body: body.into(),
             created_time: dt,
             updated_time: dt,
             is_conflict: false,

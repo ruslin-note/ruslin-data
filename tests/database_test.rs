@@ -1,8 +1,6 @@
+use ruslin_data::{Database, DatabaseResult, Folder, Note, SearchBodyOption, UpdateSource};
 use std::{ops::Deref, time::Duration};
-
 use tempfile::TempDir;
-
-use ruslin_data::{Database, DatabaseResult, Folder, Note, UpdateSource};
 
 pub struct TestDatabase(pub Database, TempDir);
 
@@ -78,9 +76,9 @@ fn test_search_notes() -> DatabaseResult<()> {
         UpdateSource::LocalEdit,
     )?;
     db.rebuild_fts()?;
-    let notes = db.search_notes("abcd", false)?;
+    let notes = db.search_notes("abcd", None)?;
     assert_eq!(3, notes.len());
-    let notes = db.search_notes("efgh", false)?;
+    let notes = db.search_notes("efgh", None)?;
     assert_eq!(2, notes.len());
     Ok(())
 }
@@ -91,18 +89,18 @@ fn test_search_chinese_notes() -> DatabaseResult<()> {
     let note = Note::new(None, "我是中国人".to_string(), "中文测试".to_string());
     db.replace_note(&note, UpdateSource::LocalEdit)?;
     db.rebuild_fts()?;
-    let notes = db.search_notes("中国", true)?;
+    let notes = db.search_notes("中国", Some(SearchBodyOption::Highlight))?;
     assert_eq!(1, notes.len());
     assert_eq!("我是<mark>中国</mark>人", notes[0].title);
-    let notes = db.search_notes("中国", false)?;
+    let notes = db.search_notes("中国", None)?;
     assert_eq!(1, notes.len());
     assert_eq!("我是中国人", notes[0].title);
 
-    let notes = db.search_notes("我", true)?;
+    let notes = db.search_notes("我", Some(SearchBodyOption::Highlight))?;
     assert_eq!(1, notes.len());
-    let notes = db.search_notes("国人", true)?;
+    let notes = db.search_notes("国人", Some(SearchBodyOption::Highlight))?;
     assert_eq!(0, notes.len());
-    let notes = db.search_notes("测试", true)?;
+    let notes = db.search_notes("测试", Some(SearchBodyOption::Highlight))?;
     assert_eq!("中文<mark>测试</mark>", notes[0].body);
     assert_eq!(1, notes.len());
     Ok(())
@@ -113,16 +111,31 @@ fn test_search_notes_update() -> DatabaseResult<()> {
     let db = TestDatabase::temp();
     let mut note = Note::new(None, "abcd efgh".to_string(), "abcd".to_string());
     db.replace_note(&note, UpdateSource::LocalEdit)?;
-    let notes = db.search_notes("efgh", false)?;
+    let notes = db.search_notes("efgh", None)?;
     assert_eq!(1, notes.len());
     note.title = "abcd".to_string();
     db.replace_note(&note, UpdateSource::LocalEdit)?;
-    let notes = db.search_notes("efgh", false)?;
+    let notes = db.search_notes("efgh", None)?;
     assert_eq!(0, notes.len());
-    let notes = db.search_notes("abcd", false)?;
+    let notes = db.search_notes("abcd", None)?;
     assert_eq!(1, notes.len());
     db.delete_note(&note.id, UpdateSource::LocalEdit)?;
-    let notes = db.search_notes("abcd", false)?;
+    let notes = db.search_notes("abcd", None)?;
     assert_eq!(0, notes.len());
+    Ok(())
+}
+
+#[test]
+fn test_search_option() -> DatabaseResult<()> {
+    let db = TestDatabase::temp();
+    let note = Note::new(None, "lorem ipsum", "Rutrum pellentesque fringilla conubia lacinia efficitur facilisis condimentum faucibus congue. 
+    Aliquet duis quisque rhoncus leo donec praesent conubia gravida. Nunc lectus massa cubilia fusce viverra hendrerit ultrices auctor nullam. 
+    Massa nec eros nulla porta lacinia bibendum. Magna enim velit commodo venenatis sit nisl ullamcorper. 
+    Malesuada donec sodales urna fermentum primis mauris pellentesque.");
+    db.replace_note(&note, UpdateSource::LocalEdit)?;
+    let notes = db.search_notes("congue", Some(SearchBodyOption::Snippet { max_tokens: 16 }))?;
+    assert!(!notes.is_empty());
+    let notes = db.search_notes("conubia", Some(SearchBodyOption::Snippet { max_tokens: 8 }))?;
+    assert!(!notes.is_empty());
     Ok(())
 }

@@ -5,7 +5,7 @@ pub mod sync;
 
 use std::{path::Path, sync::Arc};
 
-pub use database::{Database, DatabaseError, DatabaseResult, UpdateSource};
+pub use database::{Database, DatabaseError, DatabaseResult, SearchBodyOption, UpdateSource};
 pub use models::*;
 use parking_lot::RwLock;
 use sync::{
