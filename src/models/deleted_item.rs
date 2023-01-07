@@ -47,4 +47,16 @@ impl<'a> NewDeletedItem<'a> {
             deleted_time: DateTimeTimestamp::now(),
         }
     }
+
+    pub fn new_items(item_type: ModelType, item_ids: &[&'a str]) -> Vec<Self> {
+        let deleted_time = DateTimeTimestamp::now();
+        item_ids
+            .iter()
+            .map(|item_id| Self {
+                item_type,
+                item_id,
+                deleted_time,
+            })
+            .collect()
+    }
 }

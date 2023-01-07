@@ -24,7 +24,7 @@ impl Deref for TestDatabase {
 }
 
 fn get_folder_1() -> Folder {
-    Folder::new("folder1".to_string(), None)
+    Folder::new("folder1", None)
 }
 
 #[test]
@@ -43,6 +43,60 @@ fn test_folder() -> DatabaseResult<()> {
     db.delete_folder(&folder.id, UpdateSource::LocalEdit)?;
     let load_folders = db.load_folders()?;
     assert!(load_folders.is_empty());
+    Ok(())
+}
+
+#[test]
+fn insert_folder_note() -> DatabaseResult<()> {
+    let db = TestDatabase::temp();
+    let folder_a = db.insert_root_folder("folder_a")?;
+    db.insert_note_with_parent("a", "", &folder_a.id)?;
+    let notes = db.load_abbr_notes(Some(&folder_a.id))?;
+    assert_eq!(1, notes.len());
+    Ok(())
+}
+
+#[test]
+fn test_delete_folder() -> DatabaseResult<()> {
+    let db = TestDatabase::temp();
+    // a -> b,c
+    // c -> d
+    // x -> y
+    let folder_a = db.insert_root_folder("folder_a")?;
+    let folder_b = db.insert_folder_with_parent("folder_b", &folder_a.id)?;
+    let folder_c = db.insert_folder_with_parent("folder_c", &folder_a.id)?;
+    let folder_d = db.insert_folder_with_parent("folder_d", &folder_c.id)?;
+    let folder_x = db.insert_root_folder("folder_x")?;
+    let folder_y = db.insert_folder_with_parent("folder_y", &folder_x.id)?;
+
+    let note_a = db.insert_note_with_parent("a", "", &folder_a.id)?;
+    let note_b = db.insert_note_with_parent("b", "", &folder_b.id)?;
+    let note_c = db.insert_note_with_parent("c", "", &folder_c.id)?;
+    let note_d = db.insert_note_with_parent("d", "", &folder_d.id)?;
+    let _note_x = db.insert_note_with_parent("x", "", &folder_x.id)?;
+    let _note_y = db.insert_note_with_parent("y", "", folder_y.id)?;
+
+    let deleted_item_ids: Vec<&str> = vec![
+        &folder_a.id,
+        &folder_b.id,
+        &folder_c.id,
+        &folder_d.id,
+        &note_a.id,
+        &note_b.id,
+        &note_c.id,
+        &note_d.id,
+    ];
+
+    db.delete_folder(&folder_a.id, UpdateSource::LocalEdit)?;
+    let remained_folders = db.load_folders()?;
+    assert_eq!(2, remained_folders.len());
+    let remained_notes = db.load_abbr_notes(None)?;
+    assert_eq!(2, remained_notes.len());
+    let deleted_items = db.load_deleted_items()?;
+    assert_eq!(deleted_item_ids.len(), deleted_items.len());
+    let sync_items = db.load_all_sync_items()?;
+    assert_eq!(4, sync_items.len());
+
     Ok(())
 }
 

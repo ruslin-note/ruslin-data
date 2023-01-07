@@ -105,6 +105,22 @@ impl Database {
 }
 
 impl Database {
+    pub fn insert_root_folder(&self, title: impl Into<String>) -> DatabaseResult<Folder> {
+        let folder = Folder::new_root(title);
+        self.replace_folder(&folder, UpdateSource::LocalEdit)?;
+        Ok(folder)
+    }
+
+    pub fn insert_folder_with_parent(
+        &self,
+        title: impl Into<String>,
+        parent_id: impl Into<String>,
+    ) -> DatabaseResult<Folder> {
+        let folder = Folder::new_with_parent(title, parent_id);
+        self.replace_folder(&folder, UpdateSource::LocalEdit)?;
+        Ok(folder)
+    }
+
     pub fn replace_folder(
         &self,
         folder: &Folder,
@@ -138,11 +154,24 @@ impl Database {
             .first(&mut conn)?)
     }
 
+    pub fn load_subfolders(&self, id: &str) -> DatabaseResult<Vec<Folder>> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::folders;
+        Ok(folders::table
+            .select(Folder::SELECTION)
+            .filter(folders::parent_id.eq(id))
+            .load(&mut conn)?)
+    }
+
     pub fn delete_folder(&self, id: &str, update_source: UpdateSource) -> DatabaseResult<()> {
         let mut conn = self.connection_pool.get()?;
         use crate::schema::folders;
         if update_source.is_local_edit() {
-            self.delete_notes_by_folder_id(Some(id))?;
+            self.delete_notes_by_folder_id(id)?;
+            let subfolders = self.load_subfolders(id)?;
+            for folder in subfolders {
+                self.delete_folder(&folder.id, UpdateSource::LocalEdit)?;
+            }
         }
         self.delete_sync_item(id)?;
         diesel::delete(folders::table)
@@ -247,6 +276,17 @@ impl Database {
             .first(&mut conn)?)
     }
 
+    pub fn insert_note_with_parent(
+        &self,
+        title: impl Into<String>,
+        body: impl Into<String>,
+        parent_id: impl Into<String>,
+    ) -> DatabaseResult<Note> {
+        let note = Note::new_with_parent(parent_id, title, body);
+        self.replace_note(&note, UpdateSource::LocalEdit)?;
+        Ok(note)
+    }
+
     pub fn replace_note(&self, note: &Note, update_source: UpdateSource) -> DatabaseResult<()> {
         let note = match update_source {
             UpdateSource::RemoteSync => note.clone(),
@@ -283,24 +323,28 @@ impl Database {
         Ok(())
     }
 
+    fn delete_notes(&self, notes_id: &[&str]) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::notes;
+        self.delete_sync_items(notes_id)?;
+        diesel::delete(notes::table)
+            .filter(notes::id.eq_any(notes_id))
+            .execute(&mut conn)?;
+        self.insert_deleted_items(ModelType::Note, notes_id)?;
+        Ok(())
+    }
+
+    fn delete_notes_by_folder_id(&self, folder_id: &str) -> DatabaseResult<()> {
+        let notes = self.load_abbr_notes(Some(folder_id))?;
+        let note_ids: Vec<&str> = notes.iter().map(|n| n.id.as_str()).collect();
+        self.delete_notes(&note_ids)?;
+        Ok(())
+    }
+
     pub fn note_count(&self) -> DatabaseResult<i64> {
         let mut conn = self.connection_pool.get()?;
         use crate::schema::notes;
         Ok(notes::table.count().get_result(&mut conn)?)
-    }
-
-    fn delete_notes_by_folder_id(&self, folder_id: Option<&str>) -> DatabaseResult<()> {
-        let notes = self.load_abbr_notes(folder_id)?;
-        for note in notes {
-            self.delete_note(&note.id, UpdateSource::LocalEdit)?;
-        }
-        // TODO: batch delete
-        // let mut conn = self.connection_pool.get()?;
-        // use crate::schema::notes;
-        // diesel::delete(notes::table)
-        //     .filter(notes::parent_id.eq_any(folder_id))
-        //     .execute(&mut conn)?;
-        Ok(())
     }
 
     pub fn rebuild_fts(&self) -> DatabaseResult<()> {
@@ -409,6 +453,21 @@ impl Database {
             .load(&mut conn)?)
     }
 
+    pub fn load_all_sync_items(&self) -> DatabaseResult<Vec<SyncItem>> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::sync_items;
+        Ok(sync_items::table
+            .select((
+                sync_items::id,
+                sync_items::sync_target,
+                sync_items::sync_time,
+                sync_items::update_time,
+                sync_items::item_type,
+                sync_items::item_id,
+            ))
+            .load(&mut conn)?)
+    }
+
     pub fn load_need_upload_sync_items(&self) -> DatabaseResult<Vec<SyncItem>> {
         let mut conn = self.connection_pool.get()?;
         use crate::schema::sync_items;
@@ -457,6 +516,15 @@ impl Database {
             .execute(&mut conn)?;
         Ok(())
     }
+
+    pub fn delete_sync_items(&self, item_id: &[&str]) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::sync_items;
+        diesel::delete(sync_items::table)
+            .filter(sync_items::item_id.eq_any(item_id))
+            .execute(&mut conn)?;
+        Ok(())
+    }
 }
 
 impl Database {
@@ -466,6 +534,16 @@ impl Database {
         let deleted_item = NewDeletedItem::new(item_type, item_id);
         diesel::insert_into(deleted_items::table)
             .values(&deleted_item)
+            .execute(&mut conn)?;
+        Ok(())
+    }
+
+    fn insert_deleted_items(&self, item_type: ModelType, item_ids: &[&str]) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::deleted_items;
+        let deleted_items = NewDeletedItem::new_items(item_type, item_ids);
+        diesel::insert_into(deleted_items::table)
+            .values(&deleted_items)
             .execute(&mut conn)?;
         Ok(())
     }

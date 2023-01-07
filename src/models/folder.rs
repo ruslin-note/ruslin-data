@@ -58,11 +58,11 @@ pub struct Folder {
 }
 
 impl Folder {
-    pub fn new(title: String, parent_id: Option<String>) -> Self {
+    pub fn new(title: impl Into<String>, parent_id: Option<String>) -> Self {
         let time = DateTimeTimestamp::now();
         Self {
             id: new_id(),
-            title,
+            title: title.into(),
             created_time: time,
             updated_time: time,
             user_created_time: time,
@@ -75,6 +75,14 @@ impl Folder {
             master_key_id: String::new(),
             icon: String::new(),
         }
+    }
+
+    pub fn new_with_parent(title: impl Into<String>, parent_id: impl Into<String>) -> Self {
+        Self::new(title, Some(parent_id.into()))
+    }
+
+    pub fn new_root(title: impl Into<String>) -> Self {
+        Self::new(title, None)
     }
 
     pub fn updated(&self) -> Self {

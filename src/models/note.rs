@@ -78,6 +78,14 @@ pub struct Note {
 }
 
 impl Note {
+    pub fn new_with_parent(
+        parent_id: impl Into<String>,
+        title: impl Into<String>,
+        body: impl Into<String>,
+    ) -> Self {
+        Self::new(Some(parent_id.into()), title, body)
+    }
+
     pub fn new(
         parent_id: Option<String>,
         title: impl Into<String>,

@@ -45,7 +45,7 @@ impl SyncTargetInfo {
                 return false;
             }
         }
-        return true;
+        true
     }
 }
 
