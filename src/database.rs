@@ -142,7 +142,10 @@ impl Database {
     pub fn load_folders(&self) -> DatabaseResult<Vec<Folder>> {
         let mut conn = self.connection_pool.get()?;
         use crate::schema::folders;
-        Ok(folders::table.select(Folder::SELECTION).load(&mut conn)?)
+        Ok(folders::table
+            .select(Folder::SELECTION)
+            .order(folders::title.asc())
+            .load(&mut conn)?)
     }
 
     pub fn load_folder(&self, id: &str) -> DatabaseResult<Folder> {

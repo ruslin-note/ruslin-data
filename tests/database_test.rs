@@ -47,6 +47,17 @@ fn test_folder() -> DatabaseResult<()> {
 }
 
 #[test]
+fn test_folder_order() -> DatabaseResult<()> {
+    let db = TestDatabase::temp();
+    db.insert_root_folder("b")?;
+    db.insert_root_folder("a")?;
+    let folders = db.load_folders()?;
+    let titles: Vec<&str> = folders.iter().map(|x| x.title.as_str()).collect();
+    assert_eq!(&vec!["a", "b"], &titles);
+    Ok(())
+}
+
+#[test]
 fn insert_folder_note() -> DatabaseResult<()> {
     let db = TestDatabase::temp();
     let folder_a = db.insert_root_folder("folder_a")?;
