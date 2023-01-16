@@ -2,6 +2,14 @@
 name = "ruslin-data"
 version = "0.1.0-alpha.1"
 edition = "2021"
+license = "GPL-3.0"
+description = "A simple notes application that supports syncing notes using a self-hosted Joplin server."
+homepage = "https://github.com/ruslin-note/ruslin-data"
+repository = "https://github.com/ruslin-note/ruslin-data"
+readme = "README.md"
+exclude = [
+    "tools/joplin-server/*",
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
