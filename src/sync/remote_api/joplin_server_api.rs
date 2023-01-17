@@ -45,7 +45,15 @@ impl From<JoplinServerError> for SyncError {
                     return Self::FileNotExists(text.to_string());
                 }
             }
-            JoplinServerError::ResponseInnerError(_) | JoplinServerError::APIError { .. } => (),
+            JoplinServerError::APIError {
+                status_code,
+                api_error,
+            } => {
+                if *status_code == StatusCode::NOT_FOUND {
+                    return Self::FileNotExists(api_error.error.to_string());
+                }
+            }
+            JoplinServerError::ResponseInnerError(_) => (),
         };
         Self::APIError(Box::new(err))
     }
