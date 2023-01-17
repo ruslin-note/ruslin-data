@@ -15,23 +15,37 @@ pub type JoplinServerResult<T> = Result<T, JoplinServerError>;
 #[derive(Error, Debug)]
 pub enum JoplinServerError {
     #[error("response error {status_code} {text}")]
-    ResError {
+    ResponseError {
         text: String,
         status_code: StatusCode,
     },
+    #[error("{status_code}:{api_error}")]
+    APIError {
+        status_code: StatusCode,
+        api_error: JoplinAPIError,
+    },
     #[error("response inner error {0}")]
-    ResInnerError(#[from] ResError),
+    ResponseInnerError(#[from] ResError),
 }
+
+#[derive(Error, Debug, Deserialize)]
+#[error("{error}")]
+pub struct JoplinAPIError {
+    pub code: Option<String>, // enum?
+    pub error: String,
+}
+
+const RESYNC_REQUIRED_CODE: &str = "resyncRequired";
 
 impl From<JoplinServerError> for SyncError {
     fn from(err: JoplinServerError) -> Self {
         match &err {
-            JoplinServerError::ResError { text, status_code } => {
+            JoplinServerError::ResponseError { text, status_code } => {
                 if *status_code == StatusCode::NOT_FOUND {
                     return Self::FileNotExists(text.to_string());
                 }
             }
-            JoplinServerError::ResInnerError(_) => (),
+            JoplinServerError::ResponseInnerError(_) | JoplinServerError::APIError { .. } => (),
         };
         Self::APIError(Box::new(err))
     }
@@ -174,12 +188,14 @@ impl JoplinServerAPI {
     pub async fn check_response(res: Response) -> JoplinServerResult<Response> {
         let status_code = res.status();
         if status_code.is_success() {
-            return Ok(res);
+            Ok(res)
+        } else {
+            let api_error: JoplinAPIError = res.json().await?;
+            Err(JoplinServerError::APIError {
+                status_code,
+                api_error,
+            })
         }
-        Err(JoplinServerError::ResError {
-            text: res.text().await.ok().unwrap_or_default(),
-            status_code,
-        })
     }
 
     pub async fn put(&self, path: &str, s: String) -> JoplinServerResult<PutResult> {
@@ -236,7 +252,7 @@ impl JoplinServerAPI {
         self.delta("", cursor).await
     }
 
-    pub async fn delta(&self, path: &str, cursor: Option<&str>) -> JoplinServerResult<DeltaResult> {
+    async fn _delta(&self, path: &str, cursor: Option<&str>) -> JoplinServerResult<DeltaResult> {
         let mut builder =
             self.request_builder(Method::GET, &format!("{}/delta", self.with_path(path)));
         if let Some(cursor) = cursor {
@@ -258,6 +274,23 @@ impl JoplinServerAPI {
             true
         });
         Ok(delta_result)
+    }
+
+    pub async fn delta(&self, path: &str, cursor: Option<&str>) -> JoplinServerResult<DeltaResult> {
+        let delta_result = self._delta(path, cursor).await;
+        match delta_result {
+            Ok(delta) => Ok(delta),
+            Err(e) => match &e {
+                JoplinServerError::APIError { api_error, .. } => {
+                    if api_error.code.as_deref() == Some(RESYNC_REQUIRED_CODE) {
+                        self._delta(path, None).await
+                    } else {
+                        Err(e)
+                    }
+                }
+                _ => Err(e),
+            },
+        }
     }
 
     pub async fn root_list(&self, cursor: Option<&str>) -> JoplinServerResult<ListResult> {
@@ -439,6 +472,13 @@ mod tests {
         // assert_eq!(put_result_2.id, delta_result.items[0].id);
         // api.delete(&path_1)?;
         // api.delete(&path_2)?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_delta_invalid_cursor() -> JoplinServerResult<()> {
+        let api = TestSyncClient::Default.login().await;
+        api.delta("", Some("invalid")).await?;
         Ok(())
     }
 
