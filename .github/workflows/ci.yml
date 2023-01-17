@@ -1,0 +1,39 @@
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+name: CI
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run cargo fmt
+        run: cargo fmt --all -- --check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Start Joplin Server Docker
+        working-directory: ./tools/joplin-server
+        run: |
+          docker-compose up -d
+          sleep 20
+          bash prepare-test-server.sh
+
+      - name: Cargo test
+        run: cargo test
+
+      - name: Stop Joplin Server Docker
+        working-directory: ./tools/joplin-server
+        if: always()
+        run: docker-compose down
+
