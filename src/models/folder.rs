@@ -7,7 +7,7 @@ use crate::{
     DateTimeTimestamp, ModelType,
 };
 use diesel::prelude::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // #[repr(i32)]
 // enum FolderIconType {

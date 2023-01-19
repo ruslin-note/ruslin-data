@@ -7,7 +7,7 @@ use crate::{
     DateTimeTimestamp, ModelType,
 };
 use diesel::prelude::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Identifiable, Insertable, Queryable, Eq, Debug, Serialize, Deserialize)]
 #[diesel(primary_key(id))]
@@ -29,7 +29,9 @@ diesel::table! {
     }
 }
 
-#[derive(Clone, Identifiable, Insertable, Queryable, QueryableByName, Eq, Debug, Serialize, Deserialize)]
+#[derive(
+    Clone, Identifiable, Insertable, Queryable, QueryableByName, Eq, Debug, Serialize, Deserialize,
+)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = notes)]
 pub struct NoteFts {
@@ -44,7 +46,9 @@ impl PartialEq for NoteFts {
     }
 }
 
-#[derive(Clone, Identifiable, Insertable, AsChangeset, Queryable, Debug, Serialize, Deserialize)]
+#[derive(
+    Clone, Identifiable, Insertable, AsChangeset, Queryable, Debug, Serialize, Deserialize,
+)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = notes)]
 pub struct Note {
