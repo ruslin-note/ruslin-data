@@ -7,6 +7,7 @@ use crate::{
     DateTimeTimestamp, ModelType,
 };
 use diesel::prelude::*;
+use serde::{Serialize, Deserialize};
 
 // #[repr(i32)]
 // enum FolderIconType {
@@ -38,7 +39,7 @@ pub type SelectionType = (
     folders::columns::icon,
 );
 
-#[derive(Clone, Identifiable, Insertable, Queryable, Eq, Debug)]
+#[derive(Clone, Identifiable, Insertable, Queryable, Eq, Debug, Serialize, Deserialize)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = folders)]
 pub struct Folder {
