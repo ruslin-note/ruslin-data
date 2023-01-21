@@ -24,7 +24,7 @@ use crate::{
     new_id,
     sync::{ForSyncSerializer, SerializeForSync},
     AbbrNote, DateTimeTimestamp, DeletedItem, ModelType, NewDeletedItem, NewSetting, NewSyncItem,
-    Note, NoteFts, NoteTag, Resource, Setting, Status, SyncItem, Tag,
+    Note, NoteFts, NoteTag, NoteTagId, Resource, Setting, Status, SyncItem, Tag,
 };
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
@@ -321,6 +321,7 @@ impl Database {
             .filter(notes::id.eq(id))
             .execute(&mut conn)?;
         if update_source.is_local_edit() {
+            self.delete_note_tag_by_note_ids(&[id], UpdateSource::LocalEdit)?;
             self.insert_deleted_item(ModelType::Note, id)?;
         }
         Ok(())
@@ -333,6 +334,7 @@ impl Database {
         diesel::delete(notes::table)
             .filter(notes::id.eq_any(notes_id))
             .execute(&mut conn)?;
+        self.delete_note_tag_by_note_ids(notes_id, UpdateSource::LocalEdit)?;
         self.insert_deleted_items(ModelType::Note, notes_id)?;
         Ok(())
     }
@@ -623,19 +625,23 @@ impl Database {
         use crate::schema::tags;
         Ok(tags::table
             .filter(tags::id.eq(id))
-            .select((
-                tags::id,
-                tags::title,
-                tags::created_time,
-                tags::updated_time,
-                tags::user_created_time,
-                tags::user_updated_time,
-                tags::encryption_cipher_text,
-                tags::encryption_applied,
-                tags::is_shared,
-                tags::parent_id,
-            ))
+            .select(Tag::SELECTION)
             .first(&mut conn)?)
+    }
+
+    pub fn load_all_tags(&self) -> DatabaseResult<Vec<Tag>> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::tags;
+        Ok(tags::table.select(Tag::SELECTION).load(&mut conn)?)
+    }
+
+    pub fn load_tags(&self, ids: &[&str]) -> DatabaseResult<Vec<Tag>> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::tags;
+        Ok(tags::table
+            .filter(tags::id.eq_any(ids))
+            .select(Tag::SELECTION)
+            .load(&mut conn)?)
     }
 
     pub fn replace_tag(&self, tag: &Tag, update_source: UpdateSource) -> DatabaseResult<()> {
@@ -676,19 +682,47 @@ impl Database {
         use crate::schema::note_tags;
         Ok(note_tags::table
             .filter(note_tags::id.eq(id))
-            .select((
-                note_tags::id,
-                note_tags::note_id,
-                note_tags::tag_id,
-                note_tags::created_time,
-                note_tags::updated_time,
-                note_tags::user_created_time,
-                note_tags::user_updated_time,
-                note_tags::encryption_cipher_text,
-                note_tags::encryption_applied,
-                note_tags::is_shared,
-            ))
+            .select(NoteTag::SELECTION)
             .first(&mut conn)?)
+    }
+
+    pub fn load_all_note_tags(&self) -> DatabaseResult<Vec<NoteTag>> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::note_tags;
+        Ok(note_tags::table
+            .select(NoteTag::SELECTION)
+            .load(&mut conn)?)
+    }
+
+    pub fn load_note_tag_on_note(&self, note_id: &str, tag_id: &str) -> DatabaseResult<NoteTag> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::note_tags;
+        Ok(note_tags::table
+            .filter(note_tags::note_id.eq(note_id))
+            .filter(note_tags::tag_id.eq(tag_id))
+            .select(NoteTag::SELECTION)
+            .first(&mut conn)?)
+    }
+
+    pub fn get_note_tags(&self, note_id: &str) -> DatabaseResult<Vec<Tag>> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::note_tags;
+        let note_tags: Vec<NoteTag> = note_tags::table
+            .filter(note_tags::note_id.eq(note_id))
+            .select(NoteTag::SELECTION)
+            .load(&mut conn)?;
+        self.load_tags(
+            &note_tags
+                .iter()
+                .map(|x| x.tag_id.as_str())
+                .collect::<Vec<&str>>(),
+        )
+    }
+
+    pub fn add_tag_on_note(&self, note_id: &str, tag_id: &str) -> DatabaseResult<()> {
+        let note_tag = NoteTag::new(note_id, tag_id);
+        self.replace_note_tag(&note_tag, UpdateSource::LocalEdit)?;
+        Ok(())
     }
 
     pub fn replace_note_tag(
@@ -719,6 +753,69 @@ impl Database {
         if update_source.is_local_edit() {
             self.insert_deleted_item(ModelType::NoteTag, id)?;
         }
+        Ok(())
+    }
+
+    pub fn delete_note_tag_by_note_id_and_tag_id(
+        &self,
+        note_id: &str,
+        tag_id: &str,
+    ) -> DatabaseResult<()> {
+        let tag_id = self.load_note_tag_on_note(note_id, tag_id)?;
+        self.delete_note_tag(&tag_id.id, UpdateSource::LocalEdit)?;
+        Ok(())
+    }
+
+    pub fn delete_note_tags(
+        &self,
+        ids: &[&str],
+        update_source: UpdateSource,
+    ) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::note_tags;
+        self.delete_sync_items(ids)?;
+        diesel::delete(note_tags::table)
+            .filter(note_tags::id.eq_any(ids))
+            .execute(&mut conn)?;
+        if update_source.is_local_edit() {
+            self.insert_deleted_items(ModelType::NoteTag, ids)?;
+        }
+        Ok(())
+    }
+
+    pub fn delete_note_tags_by_note_id(
+        &self,
+        note_id: &str,
+        update_source: UpdateSource,
+    ) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::note_tags;
+        let tag_ids: Vec<NoteTagId> = note_tags::table
+            .filter(note_tags::note_id.eq(note_id))
+            .select((note_tags::id,))
+            .load(&mut conn)?;
+        self.delete_note_tags(
+            &tag_ids.iter().map(|x| x.id.as_str()).collect::<Vec<&str>>(),
+            update_source,
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_note_tag_by_note_ids(
+        &self,
+        note_id: &[&str],
+        update_source: UpdateSource,
+    ) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::note_tags;
+        let tag_ids: Vec<NoteTagId> = note_tags::table
+            .filter(note_tags::note_id.eq_any(note_id))
+            .select((note_tags::id,))
+            .load(&mut conn)?;
+        self.delete_note_tags(
+            &tag_ids.iter().map(|x| x.id.as_str()).collect::<Vec<&str>>(),
+            update_source,
+        )?;
         Ok(())
     }
 

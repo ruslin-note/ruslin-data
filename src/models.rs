@@ -25,7 +25,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 pub use setting::{NewSetting, Setting};
 pub use status::Status;
 pub use sync_item::{NewSyncItem, SyncItem, SyncTarget};
-pub use tag::{NoteTag, Tag};
+pub use tag::{NoteTag, NoteTagId, Tag};
 
 #[derive(
     Eq,

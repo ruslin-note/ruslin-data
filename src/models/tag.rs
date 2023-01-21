@@ -46,6 +46,30 @@ impl Tag {
         tag.updated_time = DateTimeTimestamp::now();
         tag
     }
+
+    pub const SELECTION: (
+        tags::columns::id,
+        tags::columns::title,
+        tags::columns::created_time,
+        tags::columns::updated_time,
+        tags::columns::user_created_time,
+        tags::columns::user_updated_time,
+        tags::columns::encryption_cipher_text,
+        tags::columns::encryption_applied,
+        tags::columns::is_shared,
+        tags::columns::parent_id,
+    ) = (
+        tags::id,
+        tags::title,
+        tags::created_time,
+        tags::updated_time,
+        tags::user_created_time,
+        tags::user_updated_time,
+        tags::encryption_cipher_text,
+        tags::encryption_applied,
+        tags::is_shared,
+        tags::parent_id,
+    );
 }
 
 impl Hash for Tag {
@@ -76,6 +100,13 @@ pub struct NoteTag {
     pub is_shared: bool,
 }
 
+#[derive(Clone, Identifiable, Queryable, PartialEq, Eq, Debug)]
+#[diesel(primary_key(id))]
+#[diesel(table_name = note_tags)]
+pub struct NoteTagId {
+    pub id: String,
+}
+
 impl NoteTag {
     pub fn new(note_id: &str, tag_id: &str) -> Self {
         let dt = DateTimeTimestamp::now();
@@ -98,6 +129,30 @@ impl NoteTag {
         note_tag.updated_time = DateTimeTimestamp::now();
         note_tag
     }
+
+    pub const SELECTION: (
+        note_tags::columns::id,
+        note_tags::columns::note_id,
+        note_tags::columns::tag_id,
+        note_tags::columns::created_time,
+        note_tags::columns::updated_time,
+        note_tags::columns::user_created_time,
+        note_tags::columns::user_updated_time,
+        note_tags::columns::encryption_cipher_text,
+        note_tags::columns::encryption_applied,
+        note_tags::columns::is_shared,
+    ) = (
+        note_tags::id,
+        note_tags::note_id,
+        note_tags::tag_id,
+        note_tags::created_time,
+        note_tags::updated_time,
+        note_tags::user_created_time,
+        note_tags::user_updated_time,
+        note_tags::encryption_cipher_text,
+        note_tags::encryption_applied,
+        note_tags::is_shared,
+    );
 }
 
 impl Hash for NoteTag {

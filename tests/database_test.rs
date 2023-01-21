@@ -1,4 +1,4 @@
-use ruslin_data::{Database, DatabaseResult, Folder, Note, SearchBodyOption, UpdateSource};
+use ruslin_data::{Database, DatabaseResult, Folder, Note, SearchBodyOption, Tag, UpdateSource};
 use std::{ops::Deref, time::Duration};
 use tempfile::TempDir;
 
@@ -202,5 +202,38 @@ fn test_search_option() -> DatabaseResult<()> {
     assert!(!notes.is_empty());
     let notes = db.search_notes("conubia", Some(SearchBodyOption::Snippet { max_tokens: 8 }))?;
     assert!(!notes.is_empty());
+    Ok(())
+}
+
+#[test]
+fn test_tag() -> DatabaseResult<()> {
+    let db = TestDatabase::temp();
+    let tag1 = Tag::new("tag1");
+    db.replace_tag(&tag1, UpdateSource::LocalEdit)?;
+    let all_tags = db.load_all_tags()?;
+    assert_eq!(1, all_tags.len());
+    let note1 = Note::new(None, "title1", "body1");
+    db.replace_note(&note1, UpdateSource::LocalEdit)?;
+    db.add_tag_on_note(&note1.id, &tag1.id)?;
+    let tags = db.get_note_tags(&note1.id)?;
+    assert_eq!(1, tags.len());
+    assert_eq!("tag1", tags[0].title);
+    db.delete_note_tag_by_note_id_and_tag_id(&note1.id, &tag1.id)?;
+    let tags = db.get_note_tags(&note1.id)?;
+    assert_eq!(0, tags.len());
+    Ok(())
+}
+
+#[test]
+fn test_tag_when_deleting_note() -> DatabaseResult<()> {
+    let db = TestDatabase::temp();
+    let tag1 = Tag::new("tag1");
+    db.replace_tag(&tag1, UpdateSource::LocalEdit)?;
+    let note1 = Note::new(None, "title1", "body1");
+    db.replace_note(&note1, UpdateSource::LocalEdit)?;
+    db.add_tag_on_note(&note1.id, &tag1.id)?;
+    assert_eq!(1, db.load_all_note_tags()?.len());
+    db.delete_note(&note1.id, UpdateSource::LocalEdit)?;
+    assert_eq!(0, db.load_all_note_tags()?.len());
     Ok(())
 }
