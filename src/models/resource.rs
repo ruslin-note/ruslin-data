@@ -1,6 +1,7 @@
 use std::hash::{Hash, Hasher};
 
 use crate::{
+    new_id,
     schema::resources,
     sync::{DeserializeForSync, ForSyncSerializer, SerializeForSync, SyncResult},
     DateTimeTimestamp, ModelType,
@@ -34,6 +35,28 @@ impl Resource {
         let mut resource = self.clone();
         resource.updated_time = DateTimeTimestamp::now();
         resource
+    }
+
+    pub fn new_empty() -> Self {
+        let dt = DateTimeTimestamp::now();
+        Self {
+            id: new_id(),
+            title: String::new(),
+            mime: String::new(),
+            filename: String::new(),
+            created_time: dt,
+            updated_time: dt,
+            user_created_time: dt,
+            user_updated_time: dt,
+            file_extension: String::new(),
+            encryption_cipher_text: String::new(),
+            encryption_applied: false,
+            encryption_blob_encrypted: false,
+            size: 0,
+            is_shared: false,
+            share_id: String::new(),
+            master_key_id: String::new(),
+        }
     }
 }
 
