@@ -18,7 +18,8 @@ struct TestClient(TempDir, RuslinData);
 impl TestClient {
     async fn new(sync_config: SyncConfig) -> SyncResult<Self> {
         let data_dir = tempfile::TempDir::new().unwrap();
-        let ruslin_data = RuslinData::new(data_dir.path())?;
+        let data_resource_dir = tempfile::TempDir::new().unwrap();
+        let ruslin_data = RuslinData::new(data_dir.path(), data_resource_dir.path())?;
         ruslin_data.save_sync_config(sync_config).await?;
         // ruslin_data.clear_remote().await?;
         Ok(Self(data_dir, ruslin_data))

@@ -8,8 +8,10 @@ impl TestDatabase {
     pub fn temp() -> Self {
         let temp_dir = tempfile::TempDir::new()
             .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
+        let temp_resource_dir = tempfile::TempDir::new()
+            .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
         let filename = "test.sqlite";
-        let db = Database::new_with_filename(temp_dir.path(), filename)
+        let db = Database::new_with_filename(temp_dir.path(), temp_resource_dir.path(), filename)
             .unwrap_or_else(|e| panic!("unwrap error {e:?} in {}:{}", file!(), line!()));
         Self(db, temp_dir)
     }

@@ -3,7 +3,10 @@ mod models;
 mod schema;
 pub mod sync;
 
-use std::{path::Path, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 pub use database::{Database, DatabaseError, DatabaseResult, SearchBodyOption, UpdateSource};
 pub use models::*;
@@ -17,17 +20,22 @@ use sync::{
 pub struct RuslinData {
     pub db: Arc<Database>,
     pub sync_config: RwLock<Option<SyncConfig>>,
+    pub resource_dir: PathBuf,
 }
 
 impl RuslinData {
-    pub fn new(data_dir: &Path) -> SyncResult<Self> {
-        let db = Arc::new(Database::new(data_dir)?);
+    pub fn new(data_dir: &Path, resource_dir: &Path) -> SyncResult<Self> {
+        let db = Arc::new(Database::new(data_dir, resource_dir)?);
         let sync_config = db.get_setting_value(Setting::FILE_API_SYNC_CONFIG)?;
         let sync_config = RwLock::new(match sync_config {
             Some(c) => serde_json::from_str(&c.value)?,
             None => None,
         });
-        Ok(Self { db, sync_config })
+        Ok(Self {
+            db,
+            sync_config,
+            resource_dir: resource_dir.to_path_buf(),
+        })
     }
 
     async fn get_file_api_driver(&self) -> SyncResult<Box<dyn FileApiDriver>> {

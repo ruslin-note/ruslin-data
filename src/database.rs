@@ -62,12 +62,17 @@ pub struct Database {
     connection_pool: Pool<ConnectionManager<SqliteConnection>>,
     _path: PathBuf,
     _filename: String,
+    resource_path: PathBuf,
 }
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 impl Database {
-    pub fn new_with_filename(data_dir: &Path, filename: &str) -> DatabaseResult<Database> {
+    pub fn new_with_filename(
+        data_dir: &Path,
+        resource_path: &Path,
+        filename: &str,
+    ) -> DatabaseResult<Database> {
         fs::create_dir_all(data_dir)?;
         let database_url = data_dir.join(filename);
         let database_url = database_url
@@ -84,13 +89,14 @@ impl Database {
             connection_pool,
             _path: data_dir.into(),
             _filename: filename.into(),
+            resource_path: resource_path.to_path_buf(),
         };
         db.init()?;
         Ok(db)
     }
 
-    pub fn new(data_dir: &Path) -> DatabaseResult<Database> {
-        Database::new_with_filename(data_dir, "database.sqlite")
+    pub fn new(data_dir: &Path, resource_path: &Path) -> DatabaseResult<Database> {
+        Database::new_with_filename(data_dir, resource_path, "database.sqlite")
     }
 
     fn init(&self) -> DatabaseResult<()> {
@@ -858,6 +864,11 @@ impl Database {
         resource: &Resource,
         update_source: UpdateSource,
     ) -> DatabaseResult<()> {
+        let resource_file = self
+            .resource_path
+            .join(&resource.id)
+            .with_extension(&resource.file_extension);
+        assert!(resource_file.exists());
         let resource = match update_source {
             UpdateSource::RemoteSync => resource.clone(),
             UpdateSource::LocalEdit => resource.updated(),
