@@ -116,12 +116,13 @@ impl FileApiDriver for FileApiDriverJoplinServer {
         Ok(self.api.get_text(path).await?)
     }
 
-    async fn get_file(&self, _path: &str, _destination: &Path) -> SyncResult<()> {
-        todo!()
+    async fn get_file(&self, path: &str, destination: &Path) -> SyncResult<()> {
+        Ok(self.api.get_file(path, destination).await?)
     }
 
     async fn mkdir(&self, _path: &str) -> SyncResult<()> {
-        todo!()
+        // ignore
+        Ok(())
     }
 
     async fn put_text(&self, path: &str, content: &str) -> SyncResult<()> {
@@ -129,8 +130,9 @@ impl FileApiDriver for FileApiDriverJoplinServer {
         Ok(())
     }
 
-    async fn put_file(&self, _path: &str, _local_file_path: &Path) -> SyncResult<()> {
-        todo!()
+    async fn put_file(&self, path: &str, local_file_path: &Path) -> SyncResult<()> {
+        self.api.put_file(path, local_file_path).await?;
+        Ok(())
     }
 
     async fn multi_put(&self, _items: &[super::file_api_driver::MultiPutItem]) -> SyncResult<()> {

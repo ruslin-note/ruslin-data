@@ -1,4 +1,7 @@
-use std::hash::{Hash, Hasher};
+use std::{
+    hash::{Hash, Hasher},
+    path::{Path, PathBuf},
+};
 
 use crate::{
     new_id,
@@ -56,6 +59,20 @@ impl Resource {
             is_shared: false,
             share_id: String::new(),
             master_key_id: String::new(),
+        }
+    }
+
+    pub fn resource_file_path(&self, resource_dir: &Path) -> PathBuf {
+        resource_dir
+            .join(&self.id)
+            .with_extension(&self.file_extension)
+    }
+
+    pub fn remote_path(&self) -> String {
+        if self.file_extension.is_empty() {
+            format!(".resource/{}", self.id)
+        } else {
+            format!(".resource/{}.{}", self.id, self.file_extension)
         }
     }
 }

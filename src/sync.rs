@@ -6,7 +6,12 @@ pub mod remote_api;
 mod serializer;
 mod sync_target_info;
 
-use std::{fmt::Debug, str::FromStr, sync::Arc};
+use std::{
+    fmt::Debug,
+    path::{Path, PathBuf},
+    str::FromStr,
+    sync::Arc,
+};
 
 pub use deserialize::{DeserializeForSync, ForSyncDeserializer};
 pub use error::{SyncError, SyncResult};
@@ -55,6 +60,7 @@ pub struct SyncInfo {
 
 pub struct Synchronizer {
     db: Arc<Database>,
+    resource_dir: PathBuf,
     file_api_driver: Arc<Box<dyn FileApiDriver>>,
     // lock_handler: LockHandler,
 }
@@ -67,10 +73,15 @@ pub struct Synchronizer {
 // const DEFAULT_LOCK_CLIENT_TYPE: LockClientType = LockClientType::Cli;
 
 impl Synchronizer {
-    pub fn new(db: Arc<Database>, file_api_driver: Box<dyn FileApiDriver>) -> Self {
+    pub fn new(
+        db: Arc<Database>,
+        resource_dir: &Path,
+        file_api_driver: Box<dyn FileApiDriver>,
+    ) -> Self {
         let file_api_driver = Arc::new(file_api_driver);
         Self {
             db,
+            resource_dir: resource_dir.to_path_buf(),
             file_api_driver: file_api_driver.clone(),
             // lock_handler: LockHandler::new(file_api_driver),
         }
@@ -172,7 +183,7 @@ impl Synchronizer {
                 assert_eq!(item.item_type, remote_des.r#type);
                 let remote_updated_time = remote_des.get_updated_time()?;
                 if remote_updated_time > item.sync_time {
-                    // remote.updated_time > local.sync_time -> conflict. both remote and local have changes
+                    // Case 1: remote.updated_time > local.sync_time -> conflict. both remote and local have changes
                     log::warn!(
                         target: LOG_TARGET,
                         "both remote and local have changes {:?} {}",
@@ -184,12 +195,13 @@ impl Synchronizer {
                             let local_note = self.db.load_note(&item.item_id)?;
                             let remote_note = Note::dserialize(&remote_des)?;
                             self.create_conflict_note(&local_note, Some(&remote_note))?;
-                            self.write_remote_to_local(&remote_des)?;
+                            self.write_remote_to_local(&remote_des).await?;
                             sync_info.conflict_note_count += 1;
                         }
                         ModelType::Resource => {
-                            // TODO: handle resource conflict
-                            self.write_remote_to_local(&remote_des)?;
+                            // TODO: handle resource conflict ?
+                            // Currently only new resources will be created, so there should be no conflicts ?
+                            self.write_remote_to_local(&remote_des).await?;
                             sync_info.other_conflict_count += 1;
                         }
                         ModelType::Tag
@@ -197,7 +209,7 @@ impl Synchronizer {
                         | ModelType::Folder
                         | ModelType::Unsupported => {
                             // take the remote version
-                            self.write_remote_to_local(&remote_des)?;
+                            self.write_remote_to_local(&remote_des).await?;
                             sync_info.other_conflict_count += 1;
                         }
                     }
@@ -208,7 +220,8 @@ impl Synchronizer {
                         item.item_id,
                         item.item_type
                     );
-                    // remote.updated_time < local.sync_time -> updateRemote
+                    // Case 2: remote.updated_time < local.sync_time -> updateRemote
+                    self.upload_resource_if_needed(&item).await?;
                     let upload_content = self.db.load_sync_item_content(&item)?;
                     self.file_api_driver
                         .put_text(&item.filepath(), upload_content.as_str())
@@ -222,14 +235,15 @@ impl Synchronizer {
                     item.item_id,
                     item.item_type
                 );
-                // remote == None && first sync -> createRemote
+                // Case 3: remote == None && first sync -> createRemote
+                self.upload_resource_if_needed(&item).await?;
                 let upload_content = self.db.load_sync_item_content(&item)?;
                 self.file_api_driver
                     .put_text(&item.filepath(), upload_content.as_str())
                     .await?;
                 sync_info.upload_count += 1;
             } else {
-                // remote == None && not first sync -> conflict. remote has beed deleted, but local has changes
+                // Case 4: remote == None && not first sync -> conflict. remote has beed deleted, but local has changes
                 log::warn!(
                     "remote has beed deleted, but local has changes {:?} {}",
                     item.item_type,
@@ -311,7 +325,7 @@ impl Synchronizer {
                     }
                     let content = handle.await??;
                     let des = ForSyncDeserializer::from_str(&content)?;
-                    self.write_remote_to_local(&des)?;
+                    self.write_remote_to_local(&des).await?;
                     sync_info.pull_count += 1;
                 }
             }
@@ -333,7 +347,18 @@ impl Synchronizer {
         Ok(())
     }
 
-    fn write_remote_to_local(&self, des: &ForSyncDeserializer) -> SyncResult<()> {
+    pub async fn upload_resource_if_needed(&self, sync_item: &SyncItem) -> SyncResult<()> {
+        if sync_item.item_type == ModelType::Resource {
+            let resource = self.db.load_resource(&sync_item.item_id)?;
+            let file_path = resource.resource_file_path(&self.resource_dir);
+            self.file_api_driver
+                .put_file(&resource.remote_path(), &file_path)
+                .await?;
+        }
+        Ok(())
+    }
+
+    async fn write_remote_to_local(&self, des: &ForSyncDeserializer) -> SyncResult<()> {
         let update_source = UpdateSource::RemoteSync;
         match des.r#type {
             ModelType::Note => {
@@ -359,8 +384,14 @@ impl Synchronizer {
                 log::debug!(
                     target: LOG_TARGET,
                     "pulling resource {} to local",
-                    resource.title
+                    resource.id
                 );
+                self.file_api_driver
+                    .get_file(
+                        &resource.remote_path(),
+                        &resource.resource_file_path(&self.resource_dir),
+                    )
+                    .await?;
                 self.db.replace_resource(&resource, update_source)?;
             }
             ModelType::Tag => {

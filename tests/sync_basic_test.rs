@@ -1,7 +1,9 @@
 use ruslin_data::sync::SyncConfig;
 use ruslin_data::sync::{remote_api::joplin_server_api::test_api::TestSyncClient, SyncResult};
-use ruslin_data::{Folder, Note, RuslinData, UpdateSource};
+use ruslin_data::{Folder, Note, Resource, RuslinData, UpdateSource};
 
+use std::fs::File;
+use std::io::Write;
 use std::ops::Deref;
 use tempfile::TempDir;
 
@@ -136,37 +138,36 @@ async fn test_should_not_sync_deletions_that_came_via_sync_even_when_there_is_a_
     Ok(())
 }
 
-// #[tokio::test]
-// async fn test_should_upload_resource() -> SyncResult<()> {
-//     let client_1 = TestClient::new(TestSyncClient::Upload1.sync_config()).await?;
-//     let mut resource = Resource::new_empty();
-//     resource.file_extension = "txt".to_string();
-//     let path = client_1
-//         .resource_dir
-//         .join(&resource.id)
-//         .with_extension(&resource.file_extension);
-//     let mut output = File::create(&path).unwrap();
-//     write!(output, "Rust\n💖\nFun")?;
-//     output.sync_all().unwrap();
-//     let metadata = output.metadata().unwrap();
-//     resource.size = metadata.len() as i32;
-//     resource.mime = "text/plain".to_string();
-//     resource.filename = "file.txt".to_string();
-//     client_1
-//         .db
-//         .replace_resource(&resource, UpdateSource::LocalEdit)?;
-//     client_1.sync().await?;
+#[tokio::test]
+async fn test_should_upload_resource() -> SyncResult<()> {
+    init();
+    let client_1 = TestClient::new(TestSyncClient::Upload1.sync_config()).await?;
+    let mut resource = Resource::new_empty();
+    resource.file_extension = "txt".to_string();
+    let path = client_1
+        .resource_dir
+        .join(&resource.id)
+        .with_extension(&resource.file_extension);
+    let mut output = File::create(&path).unwrap();
+    write!(output, "Rust\n💖\nFun")?;
+    output.sync_all().unwrap();
+    let metadata = output.metadata().unwrap();
+    resource.size = metadata.len() as i32;
+    resource.mime = "text/plain".to_string();
+    resource.filename = "file.txt".to_string();
+    client_1
+        .db
+        .replace_resource(&resource, UpdateSource::LocalEdit)?;
+    client_1.sync().await.unwrap();
 
-//     let client_2 = TestClient::new(TestSyncClient::Upload1.sync_config()).await?;
-//     client_2.sync().await?;
-//     let resource = client_2.db.load_resource(&resource.id)?;
-//     let path = client_2
-//         .resource_dir
-//         .join(&resource.id)
-//         .with_extension(&resource.file_extension);
-//     println!("client 2 path: {:?}", path);
+    let client_2 = TestClient::new(TestSyncClient::Upload1.sync_config()).await?;
+    client_2.sync().await.unwrap();
+    let resource = client_2.db.load_resource(&resource.id)?;
+    let path = client_2
+        .resource_dir
+        .join(&resource.id)
+        .with_extension(&resource.file_extension);
+    assert!(path.exists());
 
-//     // client_1.db.replace_resource(resource, update_source)
-
-//     Ok(())
-// }
+    Ok(())
+}

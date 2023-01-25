@@ -21,7 +21,9 @@ async fn test_delta() {
     let db = TestDatabase::temp();
     let api = TestSyncClient::Default.login().await;
     let file_api_driver = FileApiDriverJoplinServer::new(api);
-    let synchronizer = Synchronizer::new(Arc::new(db.0), Box::new(file_api_driver));
+    let temp_dir = tempfile::tempdir().unwrap();
+    let synchronizer =
+        Synchronizer::new(Arc::new(db.0), temp_dir.path(), Box::new(file_api_driver));
     synchronizer
         .start()
         .await
