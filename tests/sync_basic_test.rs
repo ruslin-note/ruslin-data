@@ -142,19 +142,14 @@ async fn test_should_not_sync_deletions_that_came_via_sync_even_when_there_is_a_
 async fn test_should_upload_resource() -> SyncResult<()> {
     init();
     let client_1 = TestClient::new(TestSyncClient::Upload1.sync_config()).await?;
-    let mut resource = Resource::new_empty();
-    resource.file_extension = "txt".to_string();
-    let path = client_1
-        .resource_dir
-        .join(&resource.id)
-        .with_extension(&resource.file_extension);
+    let mut resource = Resource::new("file.txt", "text/plain", "txt", 0);
+    let path = resource.resource_file_path(&client_1.resource_dir);
     let mut output = File::create(&path).unwrap();
     write!(output, "Rust\n💖\nFun")?;
     output.sync_all().unwrap();
     let metadata = output.metadata().unwrap();
     resource.size = metadata.len() as i32;
-    resource.mime = "text/plain".to_string();
-    resource.filename = "file.txt".to_string();
+
     client_1
         .db
         .replace_resource(&resource, UpdateSource::LocalEdit)?;
@@ -163,10 +158,7 @@ async fn test_should_upload_resource() -> SyncResult<()> {
     let client_2 = TestClient::new(TestSyncClient::Upload1.sync_config()).await?;
     client_2.sync().await.unwrap();
     let resource = client_2.db.load_resource(&resource.id)?;
-    let path = client_2
-        .resource_dir
-        .join(&resource.id)
-        .with_extension(&resource.file_extension);
+    let path = resource.resource_file_path(&client_2.resource_dir);
     assert!(path.exists());
 
     Ok(())

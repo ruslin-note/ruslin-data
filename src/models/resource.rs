@@ -40,22 +40,27 @@ impl Resource {
         resource
     }
 
-    pub fn new_empty() -> Self {
+    pub fn new(
+        title: impl Into<String>,
+        mime: impl Into<String>,
+        file_extension: impl Into<String>,
+        size: i32,
+    ) -> Self {
         let dt = DateTimeTimestamp::now();
         Self {
             id: new_id(),
-            title: String::new(),
-            mime: String::new(),
+            title: title.into(),
+            mime: mime.into(),
             filename: String::new(),
             created_time: dt,
             updated_time: dt,
             user_created_time: dt,
             user_updated_time: dt,
-            file_extension: String::new(),
+            file_extension: file_extension.into(),
             encryption_cipher_text: String::new(),
             encryption_applied: false,
             encryption_blob_encrypted: false,
-            size: 0,
+            size,
             is_shared: false,
             share_id: String::new(),
             master_key_id: String::new(),
@@ -69,11 +74,7 @@ impl Resource {
     }
 
     pub fn remote_path(&self) -> String {
-        if self.file_extension.is_empty() {
-            format!(".resource/{}", self.id)
-        } else {
-            format!(".resource/{}.{}", self.id, self.file_extension)
-        }
+        format!(".resource/{}", self.id)
     }
 }
 
