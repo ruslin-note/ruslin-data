@@ -77,7 +77,7 @@ impl Synchronizer {
     }
 
     pub async fn check_target_info_support(&self) -> SyncResult<()> {
-        let info_result = self.file_api_driver.get("info.json").await;
+        let info_result = self.file_api_driver.get_text("info.json").await;
         match info_result {
             Ok(r) => {
                 let sync_target_info: SyncTargetInfo = serde_json::from_str(&r)?;
@@ -91,7 +91,7 @@ impl Synchronizer {
                 SyncError::FileNotExists(_) => {
                     log::info!(target: LOG_TARGET, "creating info.json");
                     self.file_api_driver
-                        .put(
+                        .put_text(
                             "info.json",
                             &serde_json::to_string(&SyncTargetInfo::new_support_info())?,
                         )
@@ -167,7 +167,7 @@ impl Synchronizer {
         for item in need_upload_sync_items {
             let stat = self.file_api_driver.stat(&item.filepath()).await?;
             if stat.is_some() {
-                let content = self.file_api_driver.get(&item.filepath()).await?;
+                let content = self.file_api_driver.get_text(&item.filepath()).await?;
                 let remote_des = ForSyncDeserializer::from_str(&content)?;
                 assert_eq!(item.item_type, remote_des.r#type);
                 let remote_updated_time = remote_des.get_updated_time()?;
@@ -211,7 +211,7 @@ impl Synchronizer {
                     // remote.updated_time < local.sync_time -> updateRemote
                     let upload_content = self.db.load_sync_item_content(&item)?;
                     self.file_api_driver
-                        .put(&item.filepath(), upload_content.as_str())
+                        .put_text(&item.filepath(), upload_content.as_str())
                         .await?;
                     sync_info.upload_count += 1;
                 }
@@ -225,7 +225,7 @@ impl Synchronizer {
                 // remote == None && first sync -> createRemote
                 let upload_content = self.db.load_sync_item_content(&item)?;
                 self.file_api_driver
-                    .put(&item.filepath(), upload_content.as_str())
+                    .put_text(&item.filepath(), upload_content.as_str())
                     .await?;
                 sync_info.upload_count += 1;
             } else {
@@ -284,9 +284,9 @@ impl Synchronizer {
             for item in list_result.items.iter() {
                 let path = item.path.to_string();
                 let file_api_driver = self.file_api_driver.clone();
-                handles.push(tokio::spawn(
-                    async move { file_api_driver.get(&path).await },
-                ));
+                handles.push(tokio::spawn(async move {
+                    file_api_driver.get_text(&path).await
+                }));
             }
 
             let remote_ids: Vec<&str> = list_result.items.iter().map(|i| i.path_id()).collect();

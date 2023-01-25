@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
@@ -110,17 +112,25 @@ impl FileApiDriver for FileApiDriverJoplinServer {
         todo!()
     }
 
-    async fn get(&self, path: &str) -> SyncResult<String> {
+    async fn get_text(&self, path: &str) -> SyncResult<String> {
         Ok(self.api.get_text(path).await?)
+    }
+
+    async fn get_file(&self, _path: &str, _destination: &Path) -> SyncResult<()> {
+        todo!()
     }
 
     async fn mkdir(&self, _path: &str) -> SyncResult<()> {
         todo!()
     }
 
-    async fn put(&self, path: &str, content: &str) -> SyncResult<()> {
-        self.api.put(path, content.to_string()).await?;
+    async fn put_text(&self, path: &str, content: &str) -> SyncResult<()> {
+        self.api.put_text(path, content).await?;
         Ok(())
+    }
+
+    async fn put_file(&self, _path: &str, _local_file_path: &Path) -> SyncResult<()> {
+        todo!()
     }
 
     async fn multi_put(&self, _items: &[super::file_api_driver::MultiPutItem]) -> SyncResult<()> {
@@ -143,7 +153,7 @@ impl FileApiDriver for FileApiDriverJoplinServer {
     async fn check_config(&self) -> SyncResult<()> {
         let path = "testing.txt";
         let content = "testing";
-        self.api.put(path, content.to_string()).await?;
+        self.api.put_text(path, content.to_string()).await?;
         if content != self.api.get_text(path).await? {
             return Err(SyncError::Misconfiguration);
         }

@@ -36,17 +36,17 @@ impl Deref for TestFileApiDriverLocal {
 #[tokio::test]
 async fn test_create_a_file() -> SyncResult<()> {
     let file_api = TestFileApiDriverLocal::temp().await;
-    file_api.put("test.txt", "testing").await?;
-    assert_eq!("testing", file_api.get("test.txt").await?);
+    file_api.put_text("test.txt", "testing").await?;
+    assert_eq!("testing", file_api.get_text("test.txt").await?);
     Ok(())
 }
 
 #[tokio::test]
 async fn test_get_a_file_info() -> SyncResult<()> {
     let file_api = TestFileApiDriverLocal::temp().await;
-    file_api.put("test1.txt", "testing").await?;
+    file_api.put_text("test1.txt", "testing").await?;
     file_api.mkdir("sub").await?;
-    file_api.put("sub/test2.txt", "testing").await?;
+    file_api.put_text("sub/test2.txt", "testing").await?;
 
     let stat = file_api.stat("test1.txt").await?.unwrap();
     assert_eq!("test1.txt", stat.path);
@@ -65,8 +65,8 @@ async fn test_get_a_file_info() -> SyncResult<()> {
 async fn test_create_a_file_in_a_subdirectory() -> SyncResult<()> {
     let file_api = TestFileApiDriverLocal::temp().await;
     file_api.mkdir("subdir").await?;
-    file_api.put("subdir/test.txt", "testing").await?;
-    let content = file_api.get("subdir/test.txt").await?;
+    file_api.put_text("subdir/test.txt", "testing").await?;
+    let content = file_api.get_text("subdir/test.txt").await?;
     assert_eq!("testing", content);
     Ok(())
 }
@@ -75,8 +75,8 @@ async fn test_create_a_file_in_a_subdirectory() -> SyncResult<()> {
 async fn test_list_files() -> SyncResult<()> {
     let file_api = TestFileApiDriverLocal::temp().await;
     file_api.mkdir("subdir").await?;
-    file_api.put("subdir/test1.txt", "testing1").await?;
-    file_api.put("subdir/test2.txt", "testing2").await?;
+    file_api.put_text("subdir/test1.txt", "testing1").await?;
+    file_api.put_text("subdir/test2.txt", "testing2").await?;
     let files = file_api.list("subdir").await?;
     assert_eq!(2, files.items.len());
     let mut paths: Vec<String> = files.items.into_iter().map(|s| s.path).collect();
@@ -89,7 +89,7 @@ async fn test_list_files() -> SyncResult<()> {
 #[tokio::test]
 async fn test_delete_a_file() -> SyncResult<()> {
     let file_api = TestFileApiDriverLocal::temp().await;
-    file_api.put("test1.txt", "testing1").await?;
+    file_api.put_text("test1.txt", "testing1").await?;
     assert_eq!(1, file_api.list("").await?.items.len());
     file_api.delete("test1.txt").await?;
     let files = file_api.list("").await?;

@@ -66,8 +66,12 @@ impl FileApiDriver for FileApiDriverLocal {
         })
     }
 
-    async fn get(&self, path: &str) -> SyncResult<String> {
+    async fn get_text(&self, path: &str) -> SyncResult<String> {
         Ok(fs::read_to_string(path)?)
+    }
+
+    async fn get_file(&self, _path: &str, _destination: &Path) -> SyncResult<()> {
+        todo!()
     }
 
     async fn mkdir(&self, path: &str) -> SyncResult<()> {
@@ -77,10 +81,14 @@ impl FileApiDriver for FileApiDriverLocal {
         Ok(fs::create_dir(path)?)
     }
 
-    async fn put(&self, path: &str, content: &str) -> SyncResult<()> {
+    async fn put_text(&self, path: &str, content: &str) -> SyncResult<()> {
         let mut file = File::create(path)?;
         write!(&mut file, "{}", content)?;
         Ok(())
+    }
+
+    async fn put_file(&self, _path: &str, _local_file_path: &Path) -> SyncResult<()> {
+        todo!()
     }
 
     async fn multi_put(&self, _items: &[super::file_api_driver::MultiPutItem]) -> SyncResult<()> {

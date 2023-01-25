@@ -1,11 +1,15 @@
+use std::path::Path;
+
 pub use reqwest::StatusCode;
-use reqwest::{Client, RequestBuilder, Response};
+use reqwest::{Body, Client, RequestBuilder, Response};
 use reqwest::{Error as ResError, Method};
 use serde::{Deserialize, Serialize};
 
 use serde_json::json;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use thiserror::Error;
+use tokio::fs::File;
+use tokio_util::io::ReaderStream;
 
 use crate::sync::lock_handler::{Lock, LockClientType, LockList, LockType};
 use crate::{sync::SyncError, DateTimeTimestamp};
@@ -26,6 +30,8 @@ pub enum JoplinServerError {
     },
     #[error("response inner error {0}")]
     ResponseInnerError(#[from] ResError),
+    #[error("io {0}")]
+    IoError(#[from] std::io::Error),
 }
 
 #[derive(Error, Debug, Deserialize)]
@@ -53,7 +59,7 @@ impl From<JoplinServerError> for SyncError {
                     return Self::FileNotExists(api_error.error.to_string());
                 }
             }
-            JoplinServerError::ResponseInnerError(_) => (),
+            JoplinServerError::ResponseInnerError(_) | JoplinServerError::IoError(_) => (),
         };
         Self::APIError(Box::new(err))
     }
@@ -193,6 +199,27 @@ impl JoplinServerAPI {
         Ok(res.json().await?)
     }
 
+    pub async fn put_file(
+        &self,
+        path: &str,
+        local_file_path: &Path,
+    ) -> JoplinServerResult<PutResult> {
+        // https://stackoverflow.com/questions/65814450/how-to-post-a-file-using-reqwest
+        // https://github.com/tokio-rs/tokio/discussions/4264
+        let file = File::open(local_file_path).await.unwrap();
+        let reader_stream = ReaderStream::new(file);
+        let body = Body::wrap_stream(reader_stream);
+
+        let res = self
+            .request_builder(Method::PUT, &format!("{}/content", self.with_path(path)))
+            .header("Content-Type", "application/octet-stream")
+            .body(body)
+            .send()
+            .await?;
+        let res = Self::check_response(res).await?;
+        Ok(res.json().await?)
+    }
+
     pub async fn check_response(res: Response) -> JoplinServerResult<Response> {
         let status_code = res.status();
         if status_code.is_success() {
@@ -206,11 +233,15 @@ impl JoplinServerAPI {
         }
     }
 
-    pub async fn put(&self, path: &str, s: String) -> JoplinServerResult<PutResult> {
+    pub async fn put_text(
+        &self,
+        path: &str,
+        s: impl Into<String>,
+    ) -> JoplinServerResult<PutResult> {
         let res = self
             .request_builder(Method::PUT, &format!("{}/content", self.with_path(path)))
             .header("Content-Type", "application/octet-stream")
-            .body(s)
+            .body(Into::<String>::into(s))
             .send()
             .await?;
         let res = Self::check_response(res).await?;
@@ -226,13 +257,35 @@ impl JoplinServerAPI {
         Ok(())
     }
 
-    pub async fn get(&self, path: &str) -> JoplinServerResult<Vec<u8>> {
+    pub async fn get_file(&self, path: &str, destination: &Path) -> JoplinServerResult<()> {
+        // https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
+        // https://users.rust-lang.org/t/async-download-very-large-files/79621
+        use futures_util::StreamExt;
+        use tokio::io::AsyncWriteExt;
+
         let res = self
             .request_builder(Method::GET, &format!("{}/content", self.with_path(path)))
             .send()
             .await?;
         let res = Self::check_response(res).await?;
-        Ok(res.bytes().await?.to_vec())
+        let mut file = tokio::fs::File::create(destination).await?;
+
+        async fn _get_file(res: Response, file: &mut File) -> JoplinServerResult<()> {
+            let mut stream = res.bytes_stream();
+            while let Some(chunk_result) = stream.next().await {
+                let chunk = chunk_result?;
+                file.write_all(&chunk).await?;
+            }
+            file.flush().await?;
+            Ok(())
+        }
+
+        let result = _get_file(res, &mut file).await;
+        if result.is_err() {
+            tokio::fs::remove_file(destination).await?;
+        }
+
+        result
     }
 
     pub async fn get_text(&self, path: &str) -> JoplinServerResult<String> {
@@ -386,6 +439,8 @@ pub mod test_api {
         Basic2,
         Conflict1,
         SyncTargetInfo,
+        Upload1,
+        Upload2,
     }
 
     impl TestSyncClient {
@@ -419,6 +474,10 @@ mod tests {
         },
         Folder, Note,
     };
+    use std::{
+        fs::{self, File},
+        io::Write,
+    };
 
     use super::{test_api::TestSyncClient, JoplinServerResult};
 
@@ -441,14 +500,14 @@ mod tests {
     async fn test_simple() -> JoplinServerResult<()> {
         let api = TestSyncClient::Default.login().await;
         let path = "testing.bin";
-        let create_result = api.put_bytes(path, b"testing1".to_vec()).await?;
+        let create_result = api.put_text(path, "testing1").await?;
         let create_metadata = api
             .metadata(path)
             .await?
             .unwrap_or_else(|| panic!("unwrap error in {}:{}", file!(), line!()));
-        assert_eq!(b"testing1".to_vec(), api.get(path).await?);
+        assert_eq!("testing1", api.get_text(path).await?);
         let update_result = api.put_bytes(path, b"testing2".to_vec()).await?;
-        assert_eq!(b"testing2".to_vec(), api.get(path).await?);
+        assert_eq!("testing2", api.get_text(path).await?);
         let update_metadata = api
             .metadata(path)
             .await?
@@ -461,6 +520,23 @@ mod tests {
         assert_eq!(create_metadata.created_time, update_metadata.created_time);
         assert!(create_metadata.updated_time < update_metadata.updated_time);
         api.delete(path).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_file() -> JoplinServerResult<()> {
+        let api = TestSyncClient::Default.login().await;
+        let remote_path = ".tests-bin/file.bin";
+
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let upload_file_path = temp_dir.path().join("upload_file.bin");
+        let mut upload_file = File::create(&upload_file_path).unwrap();
+        upload_file.write_all(b"file").unwrap();
+        api.put_file(remote_path, &upload_file_path).await?;
+        let download_file_path = temp_dir.path().join("download_file.bin");
+        api.get_file(remote_path, &download_file_path).await?;
+        assert!(download_file_path.exists());
+        assert_eq!(b"file" as &[u8], &fs::read(download_file_path).unwrap());
         Ok(())
     }
 
@@ -507,7 +583,7 @@ mod tests {
         let api = TestSyncClient::Default.login().await;
         let test_folder = Folder::new("TestFolder".to_string(), None);
         let test_folder_path = test_folder.md_file_path();
-        api.put(&test_folder_path, test_folder.serialize().into_string())
+        api.put_text(&test_folder_path, test_folder.serialize().into_string())
             .await?;
         let test_note = Note::new(
             Some(test_folder.id),
@@ -515,7 +591,7 @@ mod tests {
             "# Test Title\n\n Content".to_string(),
         );
         let test_note_path = test_note.md_file_path();
-        api.put(&test_note_path, test_note.serialize().into_string())
+        api.put_text(&test_note_path, test_note.serialize().into_string())
             .await?;
         api.delete(&test_folder_path).await?;
         api.delete(&test_note_path).await?;

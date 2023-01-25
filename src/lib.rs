@@ -4,6 +4,7 @@ mod schema;
 pub mod sync;
 
 use std::{
+    fs,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -25,6 +26,7 @@ pub struct RuslinData {
 
 impl RuslinData {
     pub fn new(data_dir: &Path, resource_dir: &Path) -> SyncResult<Self> {
+        fs::create_dir_all(resource_dir)?;
         let db = Arc::new(Database::new(data_dir, resource_dir)?);
         let sync_config = db.get_setting_value(Setting::FILE_API_SYNC_CONFIG)?;
         let sync_config = RwLock::new(match sync_config {

@@ -5,6 +5,7 @@ use crate::sync::{SyncError, SyncResult};
 use crate::DateTimeTimestamp;
 use std::fmt::Debug;
 use std::fs::Metadata;
+use std::path::Path;
 use std::time::UNIX_EPOCH;
 
 use super::file_api_driver_joplin_server::JoplinServerSyncContext;
@@ -91,9 +92,11 @@ pub trait FileApiDriver: Send + Sync + Debug {
     async fn delta(&self, path: &str, ctx: Option<&dyn SyncContext>) -> SyncResult<DeltaList>;
     fn deserializer_delta_context(&self, s: &str) -> SyncResult<Box<dyn SyncContext>>;
     async fn list(&self, path: &str) -> SyncResult<StatList>;
-    async fn get(&self, path: &str) -> SyncResult<String>;
+    async fn get_text(&self, path: &str) -> SyncResult<String>;
+    async fn get_file(&self, path: &str, destination: &Path) -> SyncResult<()>;
     async fn mkdir(&self, path: &str) -> SyncResult<()>;
-    async fn put(&self, path: &str, content: &str) -> SyncResult<()>;
+    async fn put_text(&self, path: &str, content: &str) -> SyncResult<()>;
+    async fn put_file(&self, path: &str, local_file_path: &Path) -> SyncResult<()>;
     async fn multi_put(&self, items: &[MultiPutItem]) -> SyncResult<()>;
     async fn delete(&self, path: &str) -> SyncResult<()>;
     async fn r#move(&self, old_path: &str, new_path: &str) -> SyncResult<()>;

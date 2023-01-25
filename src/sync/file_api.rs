@@ -24,13 +24,13 @@ impl<D: FileApiDriver> FileApi<D> {
     }
 
     // async put(path: string, content: any, options: any = null)
-    pub async fn put(&self, path: &str, content: &str) -> SyncResult<()> {
-        self.driver.put(&self.full_path(path), content).await
+    pub async fn put_text(&self, path: &str, content: &str) -> SyncResult<()> {
+        self.driver.put_text(&self.full_path(path), content).await
     }
 
     // get(path: string, options: any = null)
-    pub async fn get(&self, path: &str) -> SyncResult<String> {
-        self.driver.get(&self.full_path(path)).await
+    pub async fn get_text(&self, path: &str) -> SyncResult<String> {
+        self.driver.get_text(&self.full_path(path)).await
     }
 
     pub async fn mkdir(&self, path: &str) -> SyncResult<()> {
