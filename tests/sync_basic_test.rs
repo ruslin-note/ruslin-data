@@ -56,9 +56,9 @@ async fn should_create_items(client_1: &RuslinData, client_2: &RuslinData) -> Sy
         .replace_folder(&folder, UpdateSource::LocalEdit)?;
     let note = Note::new(Some(folder.id), "un".to_string(), "".to_string());
     client_1.db.replace_note(&note, UpdateSource::LocalEdit)?;
-    client_1.sync().await?;
+    client_1.synchronize(false).await?;
     // should create local items
-    client_2.sync().await?;
+    client_2.synchronize(false).await?;
     client_2.db.load_note(&note.id)?;
     Ok(note)
 }
@@ -71,15 +71,15 @@ async fn should_update_items(
     // should update remote items
     note.set_title("un UPDATE");
     client_1.db.replace_note(note, UpdateSource::LocalEdit)?;
-    client_1.sync().await?;
+    client_1.synchronize(false).await?;
     // TODO: check client_1 local remote
 
     // should update local items
-    client_2.sync().await?;
+    client_2.synchronize(false).await?;
     note.set_title("Updated on client 2");
     client_2.db.replace_note(note, UpdateSource::LocalEdit)?;
-    client_2.sync().await?;
-    client_1.sync().await?;
+    client_2.synchronize(false).await?;
+    client_1.synchronize(false).await?;
     // TODO: check client_1 local remote
 
     Ok(())
@@ -92,8 +92,8 @@ async fn should_delete_note(
 ) -> SyncResult<()> {
     // should delete remote notes
     client_2.db.delete_note(&note.id, UpdateSource::LocalEdit)?;
-    client_2.sync().await?;
-    client_1.sync().await?;
+    client_2.synchronize(false).await?;
+    client_1.synchronize(false).await?;
     // TODO: check client_1 & client_2 local remote
     Ok(())
 }
@@ -116,16 +116,16 @@ async fn test_should_not_sync_deletions_that_came_via_sync_even_when_there_is_a_
     let client_2 = TestClient::new(TestSyncClient::Conflict1.sync_config()).await?;
     let mut note = Note::new(None, "title".to_string(), "body".to_string());
     client_1.db.replace_note(&note, UpdateSource::LocalEdit)?;
-    client_1.sync().await?;
+    client_1.synchronize(false).await?;
 
-    client_2.sync().await?;
+    client_2.synchronize(false).await?;
     client_2.db.load_note(&note.id)?;
     client_2.db.delete_note(&note.id, UpdateSource::LocalEdit)?;
-    client_2.sync().await?;
+    client_2.synchronize(false).await?;
 
     note.title = "title2".to_string();
     client_1.db.replace_note(&note, UpdateSource::LocalEdit)?;
-    client_1.sync().await?;
+    client_1.synchronize(false).await?;
     let abbr_notes = client_1.db.load_abbr_notes(None)?;
     assert!(!abbr_notes.iter().any(|n| n.id == note.id));
     assert!(client_1.db.conflict_note_exists()?);
@@ -153,10 +153,10 @@ async fn test_should_upload_resource() -> SyncResult<()> {
     client_1
         .db
         .replace_resource(&resource, UpdateSource::LocalEdit)?;
-    client_1.sync().await.unwrap();
+    client_1.synchronize(false).await.unwrap();
 
     let client_2 = TestClient::new(TestSyncClient::Upload1.sync_config()).await?;
-    client_2.sync().await.unwrap();
+    client_2.synchronize(false).await.unwrap();
     let resource = client_2.db.load_resource(&resource.id)?;
     let path = resource.resource_file_path(&client_2.resource_dir);
     assert!(path.exists());

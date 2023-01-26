@@ -25,7 +25,7 @@ async fn test_delta() {
     let synchronizer =
         Synchronizer::new(Arc::new(db.0), temp_dir.path(), Box::new(file_api_driver));
     synchronizer
-        .start()
+        .start(false)
         .await
         .unwrap_or_else(|_| panic!("unwrap error in {}:{}", file!(), line!()));
 }

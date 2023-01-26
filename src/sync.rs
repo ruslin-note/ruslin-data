@@ -114,12 +114,12 @@ impl Synchronizer {
         }
     }
 
-    pub async fn start(&self) -> SyncResult<SyncInfo> {
+    pub async fn start(&self, from_scratch: bool) -> SyncResult<SyncInfo> {
         let now = Instant::now();
         let mut sync_info = SyncInfo::default();
         self.delete_remote(&mut sync_info).await?;
         self.upload(&mut sync_info).await?;
-        self.delta(&mut sync_info).await?;
+        self.delta(&mut sync_info, from_scratch).await?;
         let elapsed = now.elapsed();
         sync_info.elapsed_time = elapsed.as_secs_f64();
         let elapsed = if elapsed.as_secs() >= 1 {
@@ -274,8 +274,10 @@ impl Synchronizer {
         Ok(())
     }
 
-    async fn delta(&self, sync_info: &mut SyncInfo) -> SyncResult<()> {
-        let mut context = if let Some(delta_context_setting) =
+    async fn delta(&self, sync_info: &mut SyncInfo, from_scratch: bool) -> SyncResult<()> {
+        let mut context = if from_scratch {
+            None
+        } else if let Some(delta_context_setting) =
             self.db.get_setting_value(Setting::FILE_API_DELTA_CONTEXT)?
         {
             Some(
@@ -318,8 +320,8 @@ impl Synchronizer {
                     }
                 } else {
                     if let Some(local_sync_item) = local_sync_item {
-                        if local_sync_item.sync_time > remote_item.updated_time {
-                            log::error!(target: LOG_TARGET, "skip the update because the local sync time({:?}) is later than the remote update time({:?})", local_sync_item.sync_time, remote_item.updated_time);
+                        if local_sync_item.sync_time > remote_item.updated_time && !from_scratch {
+                            log::debug!(target: LOG_TARGET, "skip the update because the local sync time({:?}) is later than the remote update time({:?})", local_sync_item.sync_time, remote_item.updated_time);
                             continue;
                         }
                     }

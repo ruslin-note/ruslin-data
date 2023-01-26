@@ -56,11 +56,11 @@ impl RuslinData {
         Ok(file_api_driver)
     }
 
-    pub async fn sync(&self) -> SyncResult<SyncInfo> {
+    pub async fn synchronize(&self, from_start: bool) -> SyncResult<SyncInfo> {
         let file_api_driver = self.get_file_api_driver().await?;
         let synchronizer = Synchronizer::new(self.db.clone(), &self.resource_dir, file_api_driver);
         synchronizer.check_target_info_support().await?;
-        synchronizer.start().await
+        synchronizer.start(from_start).await
     }
 
     pub fn sync_exists(&self) -> bool {
