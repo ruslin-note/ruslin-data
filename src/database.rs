@@ -438,6 +438,22 @@ impl Database {
         Ok(())
     }
 
+    pub fn load_sync_item(&self, item_id: &str) -> DatabaseResult<SyncItem> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::sync_items;
+        Ok(sync_items::table
+            .filter(sync_items::item_id.eq(item_id))
+            .select((
+                sync_items::id,
+                sync_items::sync_target,
+                sync_items::sync_time,
+                sync_items::update_time,
+                sync_items::item_type,
+                sync_items::item_id,
+            ))
+            .first(&mut conn)?)
+    }
+
     pub fn set_sync_item_up_to_data(&self, item_id: &str) -> DatabaseResult<()> {
         let mut conn = self.connection_pool.get()?;
         use crate::schema::sync_items;
