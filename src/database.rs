@@ -333,7 +333,10 @@ impl Database {
         Ok(())
     }
 
-    fn delete_notes(&self, notes_id: &[&str]) -> DatabaseResult<()> {
+    pub fn delete_notes(&self, notes_id: &[&str]) -> DatabaseResult<()> {
+        if notes_id.is_empty() {
+            return Ok(());
+        }
         let mut conn = self.connection_pool.get()?;
         use crate::schema::notes;
         self.delete_sync_items(notes_id)?;
