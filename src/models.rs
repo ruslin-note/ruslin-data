@@ -82,7 +82,7 @@ impl FromSql<Integer, Sqlite> for ModelType {
             4 => Ok(ModelType::Resource),
             5 => Ok(ModelType::Tag),
             6 => Ok(ModelType::NoteTag),
-            x => Err(format!("Unrecognized variant {}", x).into()),
+            x => Err(format!("Unrecognized variant {x}").into()),
         }
     }
 }

@@ -54,7 +54,7 @@ impl FromSql<Integer, Sqlite> for SyncTarget {
         match i32::from_sql(bytes)? {
             2 => Ok(SyncTarget::FileSystem),
             9 => Ok(SyncTarget::JoplinServer),
-            x => Err(format!("Unrecognized variant {}", x).into()),
+            x => Err(format!("Unrecognized variant {x}").into()),
         }
     }
 }

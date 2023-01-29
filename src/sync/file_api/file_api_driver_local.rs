@@ -83,7 +83,7 @@ impl FileApiDriver for FileApiDriverLocal {
 
     async fn put_text(&self, path: &str, content: &str) -> SyncResult<()> {
         let mut file = File::create(path)?;
-        write!(&mut file, "{}", content)?;
+        write!(&mut file, "{content}")?;
         Ok(())
     }
 

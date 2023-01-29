@@ -163,3 +163,33 @@ async fn test_should_upload_resource() -> SyncResult<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_allow_remote_resource_file_does_not_exists() -> SyncResult<()> {
+    init();
+    let client_1 = TestClient::new(TestSyncClient::Upload1.sync_config()).await?;
+    let mut resource = Resource::new("file.txt", "text/plain", "txt", 0);
+    let path = resource.resource_file_path(&client_1.resource_dir);
+    let mut output = File::create(&path).unwrap();
+    write!(output, "Rust\n💖\nFun")?;
+    output.sync_all().unwrap();
+    let metadata = output.metadata().unwrap();
+    resource.size = metadata.len() as i32;
+
+    client_1
+        .db
+        .replace_resource(&resource, UpdateSource::LocalEdit)?;
+    client_1.synchronize(false).await.unwrap();
+    client_1
+        .get_file_api_driver()
+        .await
+        .unwrap()
+        .delete(&resource.remote_path())
+        .await
+        .unwrap();
+
+    let client_2 = TestClient::new(TestSyncClient::Upload1.sync_config()).await?;
+    client_2.synchronize(false).await.unwrap();
+
+    Ok(())
+}

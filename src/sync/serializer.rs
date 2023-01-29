@@ -54,17 +54,17 @@ impl ForSyncSerializer {
 
     pub fn serialize_f64(&mut self, k: &str, v: f64) {
         self.insert_next_line();
-        self.0.push_str(&format!("{k}: {}", v));
+        self.0.push_str(&format!("{k}: {v}"));
     }
 
     pub fn serialize_i64(&mut self, k: &str, v: i64) {
         self.insert_next_line();
-        self.0.push_str(&format!("{k}: {}", v));
+        self.0.push_str(&format!("{k}: {v}"));
     }
 
     pub fn serialize_i32(&mut self, k: &str, v: i32) {
         self.insert_next_line();
-        self.0.push_str(&format!("{k}: {}", v));
+        self.0.push_str(&format!("{k}: {v}"));
     }
 
     pub fn serialize_bool(&mut self, k: &str, v: bool) {

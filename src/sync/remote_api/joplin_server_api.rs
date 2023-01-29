@@ -362,7 +362,7 @@ impl JoplinServerAPI {
         let path = if path.is_empty() {
             path.to_string()
         } else {
-            format!("{}/*", path)
+            format!("{path}/*")
         };
         let mut builder =
             self.request_builder(Method::GET, &format!("{}/children", self.with_path(&path)));

@@ -392,8 +392,7 @@ impl Database {
             Ok(notes_fts::table
                 .select((notes_fts::id, notes_fts::title, notes_fts::body))
                 .filter(diesel::dsl::sql::<diesel::sql_types::Bool>(&format!(
-                    "notes_fts MATCH '{}' ORDER BY bm25(notes_fts)",
-                    search_term
+                    "notes_fts MATCH '{search_term}' ORDER BY bm25(notes_fts)"
                 )))
                 .load(&mut conn)?)
         }
@@ -887,10 +886,12 @@ impl Database {
             .resource_path
             .join(&resource.id)
             .with_extension(&resource.file_extension);
-        assert!(resource_file.exists());
         let resource = match update_source {
             UpdateSource::RemoteSync => resource.clone(),
-            UpdateSource::LocalEdit => resource.updated(),
+            UpdateSource::LocalEdit => {
+                assert!(resource_file.exists());
+                resource.updated()
+            }
         };
         let mut conn = self.connection_pool.get()?;
         use crate::schema::resources;

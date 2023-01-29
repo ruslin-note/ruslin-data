@@ -40,7 +40,8 @@ impl RuslinData {
         })
     }
 
-    async fn get_file_api_driver(&self) -> SyncResult<Box<dyn FileApiDriver>> {
+    // TODO: remove public
+    pub async fn get_file_api_driver(&self) -> SyncResult<Box<dyn FileApiDriver>> {
         let sync_config = self.sync_config.read().clone();
         let sync_config = sync_config.ok_or(SyncError::SyncConfigNotExists)?;
         let file_api_driver = match &sync_config {

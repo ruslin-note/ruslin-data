@@ -388,12 +388,26 @@ impl Synchronizer {
                     "pulling resource {} to local",
                     resource.id
                 );
-                self.file_api_driver
+                let download_result = self
+                    .file_api_driver
                     .get_file(
                         &resource.remote_path(),
                         &resource.resource_file_path(&self.resource_dir),
                     )
-                    .await?;
+                    .await;
+                if let Err(e) = download_result {
+                    if e.is_file_not_exists() {
+                        log::error!(
+                            target: LOG_TARGET,
+                            "file {}({}) does not exist: {}",
+                            resource.title,
+                            resource.id,
+                            e
+                        );
+                    } else {
+                        return Err(e);
+                    }
+                }
                 self.db.replace_resource(&resource, update_source)?;
             }
             ModelType::Tag => {

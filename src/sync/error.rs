@@ -43,3 +43,9 @@ impl serde::ser::Error for SyncError {
         Self::SerializeError(msg.to_string())
     }
 }
+
+impl SyncError {
+    pub fn is_file_not_exists(&self) -> bool {
+        matches!(self, Self::FileNotExists(_))
+    }
+}
