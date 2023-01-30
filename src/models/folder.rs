@@ -87,9 +87,11 @@ impl Folder {
     }
 
     pub fn updated(&self) -> Self {
-        let mut folder = self.clone();
-        folder.updated_time = DateTimeTimestamp::now();
-        folder
+        let mut it = self.clone();
+        let dt = DateTimeTimestamp::now();
+        it.updated_time = dt;
+        it.user_updated_time = dt;
+        it
     }
 
     pub fn get_title(&self) -> &str {

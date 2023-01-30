@@ -35,9 +35,11 @@ pub struct Resource {
 
 impl Resource {
     pub fn updated(&self) -> Self {
-        let mut resource = self.clone();
-        resource.updated_time = DateTimeTimestamp::now();
-        resource
+        let mut it = self.clone();
+        let dt = DateTimeTimestamp::now();
+        it.updated_time = dt;
+        it.user_updated_time = dt;
+        it
     }
 
     pub fn new(

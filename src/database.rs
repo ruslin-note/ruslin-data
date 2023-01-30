@@ -207,13 +207,13 @@ impl Database {
             notes::id,
             notes::parent_id,
             notes::title,
-            notes::created_time,
-            notes::updated_time,
+            notes::user_created_time,
+            notes::user_updated_time,
         );
         let query_stmt = notes::table
             .select(selection)
             .filter(notes::is_conflict.eq(false))
-            .order(notes::updated_time.desc());
+            .order(notes::user_updated_time.desc());
         Ok(match parent_id {
             Some(parent_id) => query_stmt
                 .filter(notes::parent_id.eq(parent_id))
@@ -230,11 +230,11 @@ impl Database {
                 notes::id,
                 notes::parent_id,
                 notes::title,
-                notes::created_time,
-                notes::updated_time,
+                notes::user_created_time,
+                notes::user_updated_time,
             ))
             .filter(notes::is_conflict.eq(true))
-            .order(notes::updated_time.desc())
+            .order(notes::user_updated_time.desc())
             .load(&mut conn)?)
     }
 

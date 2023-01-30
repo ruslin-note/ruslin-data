@@ -16,8 +16,8 @@ pub struct AbbrNote {
     pub id: String,
     pub parent_id: Option<String>,
     pub title: String,
-    pub created_time: DateTimeTimestamp,
-    pub updated_time: DateTimeTimestamp,
+    pub user_created_time: DateTimeTimestamp,
+    pub user_updated_time: DateTimeTimestamp,
 }
 
 diesel::table! {
@@ -130,9 +130,11 @@ impl Note {
     }
 
     pub fn updated(&self) -> Self {
-        let mut note = self.clone();
-        note.updated_time = DateTimeTimestamp::now();
-        note
+        let mut it = self.clone();
+        let dt = DateTimeTimestamp::now();
+        it.updated_time = dt;
+        it.user_updated_time = dt;
+        it
     }
 
     pub fn get_title(&self) -> &str {

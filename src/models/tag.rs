@@ -42,9 +42,11 @@ impl Tag {
     }
 
     pub fn updated(&self) -> Self {
-        let mut tag = self.clone();
-        tag.updated_time = DateTimeTimestamp::now();
-        tag
+        let mut it = self.clone();
+        let dt = DateTimeTimestamp::now();
+        it.updated_time = dt;
+        it.user_updated_time = dt;
+        it
     }
 
     pub const SELECTION: (
@@ -125,9 +127,11 @@ impl NoteTag {
     }
 
     pub fn updated(&self) -> Self {
-        let mut note_tag = self.clone();
-        note_tag.updated_time = DateTimeTimestamp::now();
-        note_tag
+        let mut it = self.clone();
+        let dt = DateTimeTimestamp::now();
+        it.updated_time = dt;
+        it.user_updated_time = dt;
+        it
     }
 
     pub const SELECTION: (
