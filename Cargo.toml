@@ -16,8 +16,9 @@ exclude = [
 [dependencies]
 async-trait = "0.1.64"
 chrono = "0.4.23"
-diesel = { version = "=2.0.3", features = ["sqlite", "chrono", "r2d2", "uuid", "extras"] }
+diesel = { version = "=2.0.4", features = ["sqlite", "chrono", "r2d2", "uuid", "extras"] }
 diesel_migrations = { version = "=2.0.0", features = ["sqlite"] }
+libsqlite3-sys = { version = "=0.26.0", features = ["bundled"] }
 futures-util = "0.3.26"
 jieba-rs = "0.6.7"
 log = "0.4.17"
@@ -44,4 +45,5 @@ tempfile = "3.3.0"
 toml = "0.7.1"
 
 [patch.crates-io]
-diesel = { git = 'https://github.com/DianQK/diesel.git', tag = "v2.0.3-p1" }
+diesel = { git = 'https://github.com/DianQK/diesel.git', tag = "v2.0.4-p1" }
+diesel_migrations = { git = 'https://github.com/DianQK/diesel.git', tag = "v2.0.4-p1" }
