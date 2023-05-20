@@ -441,6 +441,7 @@ pub mod test_api {
         SyncTargetInfo,
         Upload1,
         Upload2,
+        UpdateNoteItem,
     }
 
     impl TestSyncClient {

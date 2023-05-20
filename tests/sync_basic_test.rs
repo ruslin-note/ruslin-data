@@ -98,6 +98,28 @@ async fn should_delete_note(
     Ok(())
 }
 
+#[tokio::test]
+async fn should_update_note_item() -> SyncResult<()> {
+    let client_1 = TestClient::new(TestSyncClient::UpdateNoteItem.sync_config()).await?;
+    let note = Note::new(None, "title".to_string(), "body".to_string());
+    let note_id = &note.id;
+    client_1.db.replace_note(&note, UpdateSource::LocalEdit)?;
+    client_1.synchronize(false).await?;
+    assert_eq!(client_1.db.load_need_upload_sync_items()?.len(), 0);
+    client_1.db.update_note_body(note_id, "body1")?;
+    println!("{:?}", client_1.db.load_all_sync_items()?);
+    assert_eq!(client_1.db.load_need_upload_sync_items()?.len(), 1);
+    client_1.synchronize(false).await?;
+    client_1.db.update_note_title(note_id, "title1")?;
+    assert_eq!(client_1.db.load_need_upload_sync_items()?.len(), 1);
+    let updated_note = client_1.db.load_note(note_id)?;
+    assert_eq!("body1", &updated_note.body);
+    assert_eq!("title1", &updated_note.title);
+    assert_eq!(note.created_time, updated_note.created_time);
+    assert!(note.updated_time < updated_note.updated_time);
+    Ok(())
+}
+
 // should not created deleted_items entries for items deleted via sync
 
 // should delete local notes

@@ -31,6 +31,7 @@ impl Debug for DateTimeTimestamp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("DateTimeTimestamp")
             .field(&self.format_ymd_hms())
+            .field(&self.timestamp_millis())
             .finish()
     }
 }

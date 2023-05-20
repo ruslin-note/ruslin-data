@@ -319,6 +319,38 @@ impl Database {
         Ok(())
     }
 
+    pub fn update_note_body(&self, id: &str, body: &str) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::notes;
+        let dt = DateTimeTimestamp::now();
+        diesel::update(notes::table)
+            .filter(notes::id.eq(id))
+            .set((
+                notes::body.eq(body),
+                notes::updated_time.eq(dt),
+                notes::user_updated_time.eq(dt),
+            ))
+            .execute(&mut conn)?;
+        self.replace_sync_item(ModelType::Note, id, UpdateSource::LocalEdit)?;
+        Ok(())
+    }
+
+    pub fn update_note_title(&self, id: &str, title: &str) -> DatabaseResult<()> {
+        let mut conn = self.connection_pool.get()?;
+        use crate::schema::notes;
+        let dt = DateTimeTimestamp::now();
+        diesel::update(notes::table)
+            .filter(notes::id.eq(id))
+            .set((
+                notes::title.eq(title),
+                notes::updated_time.eq(dt),
+                notes::user_updated_time.eq(dt),
+            ))
+            .execute(&mut conn)?;
+        self.replace_sync_item(ModelType::Note, id, UpdateSource::LocalEdit)?;
+        Ok(())
+    }
+
     pub fn delete_note(&self, id: &str, update_source: UpdateSource) -> DatabaseResult<()> {
         let mut conn = self.connection_pool.get()?;
         use crate::schema::notes;
@@ -424,7 +456,15 @@ impl Database {
             Some(mut sync_item) => {
                 match update_source {
                     UpdateSource::RemoteSync => sync_item.sync_time = DateTimeTimestamp::now(),
-                    UpdateSource::LocalEdit => sync_item.update_time = DateTimeTimestamp::now(),
+                    UpdateSource::LocalEdit => {
+                        sync_item.update_time = DateTimeTimestamp::now();
+                        // workaround: When the program runs fast enough, update_time may equal sync_time. May not happen in a real environment
+                        if sync_item.update_time <= sync_item.sync_time {
+                            sync_item.update_time = DateTimeTimestamp::from_timestamp_millis(
+                                sync_item.sync_time.timestamp_millis() + 1,
+                            );
+                        }
+                    }
                 }
                 diesel::replace_into(sync_items::table)
                     .values(&sync_item)
