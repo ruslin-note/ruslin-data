@@ -92,7 +92,7 @@ impl DateTimeRFC333 {
 
     pub fn from_timestamp_millis(t: i64) -> Self {
         let t = NaiveDateTime::from_timestamp_millis(t).expect("from_timestamp_millis error");
-        let time = chrono::DateTime::<Utc>::from_utc(t, Utc);
+        let time = Utc.from_utc_datetime(&t);
         Self(time)
     }
 
